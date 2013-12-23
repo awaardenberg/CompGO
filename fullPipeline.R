@@ -1,5 +1,6 @@
 require('biomaRt')
 require('RDAVIDWebService')
+require('rtracklayer')
 
 # find unique genes among two sets
 getUniqueGenes <- function(setA, setB) {
@@ -34,7 +35,7 @@ ucscDbDump <- function(db=NULL, session = NULL) {
     }
     if (is.null(db)) {
         print("getting reference...")
-        ucsc.db = ucscTableQuery(session, 'refGene', range = range(session))
+        ucsc.db = ucscTableQuery(session, 'refGene', range = genome(session))
         print("getting table...")
         ucsc.table = getTable(ucsc.db)
         print("done!")
@@ -56,8 +57,8 @@ annotateFromDump <- function(path, db = NULL) {
     bed = read.bed(path)
     names(bed) = c('chr', 'start', 'end')
     bed$chr = paste('chr', bed$chr, sep='')
-# no for loop:
-    #geneDistances = by(bed, 1:nrow(bed), function(line) {
+# sampling bed file randomly
+    bed = bed[sample(nrow(bed), 50),]
 # for loop:
     closestGenes = data.frame()
     print("starting comparison")
@@ -87,6 +88,7 @@ annotateFromDump <- function(path, db = NULL) {
             if (abs(distance) < abs(shortestLen)) {
                 shortestLen = distance
                 closest = dbLine
+                closest$distance = distance
             }
         }
         closestGenes = rbind(closest, closestGenes)

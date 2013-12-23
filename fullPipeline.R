@@ -58,8 +58,17 @@ annotateFromDump <- function(path, db = NULL) {
     names(bed) = c('chr', 'start', 'end')
     bed$chr = paste('chr', bed$chr, sep='')
 # sampling bed file randomly
-    bed = bed[sample(nrow(bed), 50),]
-# for loop:
+    #bed = bed[sample(nrow(bed), 300),]
+# to hopefully speed up:
+    numBins = floor(max(db$txStart)/1000000)
+    binList = list()
+    for(x in 1:numBins) {
+        #print(paste("<", x*1000000, ", >=", (x-1)*1000000, sep=''))
+        sub = subset(db, db$txStart < x*1000000)
+        sub = subset(sub, sub$txStart >= (x-1)*1000000)
+        binList[[x]] = sub
+    }
+
     closestGenes = data.frame()
     print("starting comparison")
     for (j in 1:nrow(bed)) {
@@ -71,14 +80,23 @@ annotateFromDump <- function(path, db = NULL) {
             print("quarter done!")
         if(j == floor(3*nrow(bed)/4))
             print("3/4 done!")
-        db.sub = subset(db, chrom == line[['chr']])
+# to hopefully speed up, first subset by range, then by chr:
+        binNumber = floor(line[['start']] / 1000000)
+        db.sub = binList[[binNumber]]
+        db.sub = subset(db.sub, chrom == line[['chr']])
         peakLen = line[['end']] - line[['start']]
         peakMid = (line[['start']] + line[['end']])/2
         shortestLen = 999999999999
         closest = data.frame()
         for(i in 1:nrow(db.sub)) {
             dbLine = db.sub[i, ]
-            if (dbLine[['strand']]== '+') {
+            if (nrow(dbLine) == 0) {
+                next;
+            }
+            if (is.na(dbLine[['strand']])){ #|| is.null(dbLine[['strand']])) {
+                next;
+            }
+            if ( dbLine[['strand']]== '+') {
                 geneStart = dbLine[['txStart']]
                 distance = peakMid - geneStart
             } else if (dbLine[['strand']]== '-') {

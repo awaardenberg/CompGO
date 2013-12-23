@@ -60,10 +60,11 @@ annotateFromDump <- function(path, db = NULL) {
     #geneDistances = by(bed, 1:nrow(bed), function(line) {
 # for loop:
     closestGenes = data.frame()
+    closestDistances = vector()
     print("starting comparison")
     for (j in 1:nrow(bed)) {
         line = bed[j,]
-        print(paste(j,"done of", nrow(bed), "elements", sep=' '))
+        #print(paste(j,"done of", nrow(bed), "elements", sep=' '))
         if(j == floor(nrow(bed)/2))
             print("halfway!")
         if(j == floor(nrow(bed)/4))
@@ -75,24 +76,30 @@ annotateFromDump <- function(path, db = NULL) {
         peakMid = (line[['start']] + line[['end']])/2
         shortestLen = 999999999999
         closest = data.frame()
-        for(i in 1:nrow(db.sub)) {
-            dbLine = db.sub[i, ]
-            if (dbLine[['strand']]== '+') {
-                geneStart = dbLine[['txStart']]
-                distance = peakMid - geneStart
-            } else if (dbLine[['strand']]== '-') {
-                geneStart = dbLine[['txEnd']]
-                distance = geneStart - peakMid
+
+        db.plus = subset(db.sub, db.sub$strand == '+')
+        db.minus = subset(db.sub, db.sub$strand == '-')
+        plusStart = as.vector(db.plus$txStart)
+        plusGene = as.vector(db.plus$name2)
+        minusStart = as.vector(db.minus$txEnd)
+        minusGene = as.vector(db.minus$name2)
+        plusDist = peakMid - plusStart
+        minusDist = minusStart - peakMid
+
+        plusMin = which.min(abs(plusDist))
+        minusMin = which.min(abs(minusDist))
+        if(plusDist[plusMin] < minusDist[minusMin]) {
+            if (plusDist[plusMin] < shortestLen) {
+                shortestLen = plusDist[plusMin]
             }
-            if (abs(distance) < abs(shortestLen)) {
-                shortestLen = distance
-                closest = dbLine
+        } else {
+            if (minusDist[minusMin] < shortestLen) {
+                shortestLen = minusDist[minusMin]
             }
         }
-        closestGenes = rbind(closest, closestGenes)
+        closestDistances = c(closestDistances, shortestLen)
     }
-# TODO: If possible, remove nested for loops
-    return(closestGenes)
+    return(closestDistances)
 }
 
 bedToGeneUCSC <- function(path, upstream=0, downstream=0, geneToBed = FALSE, session = NULL) {

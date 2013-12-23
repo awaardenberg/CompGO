@@ -49,7 +49,7 @@ buildHashFromDump <- function(db) {
 }
 '"
 
-annotateFromDump <- function(path, db = NULL) {
+annotateFromDump <- function(path, db = NULL, upstream = 0, downstream = 0) {
     if(is.null(db)) {
         print("grabbing db dump, may take time...")
         db = ucscDbDump()
@@ -57,8 +57,10 @@ annotateFromDump <- function(path, db = NULL) {
     bed = read.bed(path)
     names(bed) = c('chr', 'start', 'end')
     bed$chr = paste('chr', bed$chr, sep='')
+    bed$start = bed$start - upstream
+    bed$end = bed$end + downstream
 # sampling bed file randomly
-    #bed = bed[sample(nrow(bed), 300),]
+    #bed = bed[sample(nrow(bed), 200),]
 # to hopefully speed up:
     numBins = floor(max(db$txStart)/1000000)
     binList = list()
@@ -71,6 +73,7 @@ annotateFromDump <- function(path, db = NULL) {
 
     closestGenes = data.frame()
     print("starting comparison")
+    t = proc.time()
     for (j in 1:nrow(bed)) {
         line = bed[j,]
         print(paste(j,"done of", nrow(bed), "elements", sep=' '))
@@ -111,6 +114,7 @@ annotateFromDump <- function(path, db = NULL) {
         }
         closestGenes = rbind(closest, closestGenes)
     }
+    print(proc.time() - t)
 # TODO: If possible, remove nested for loops
     return(closestGenes)
 }

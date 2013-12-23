@@ -86,6 +86,8 @@ annotateFromDump <- function(path, db = NULL, upstream = 0, downstream = 0) {
 # to hopefully speed up, first subset by range, then by chr:
         binNumber = floor(line[['start']] / 1000000)
         db.sub = binList[[binNumber]]
+        db.sub = rbind(db.sub, binList[[binNumber + 1]])
+        db.sub = rbind(db.sub, binList[[binNumber - 1]])
         db.sub = subset(db.sub, chrom == line[['chr']])
         peakLen = line[['end']] - line[['start']]
         peakMid = (line[['start']] + line[['end']])/2

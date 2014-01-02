@@ -93,28 +93,22 @@ annotateFromDump <- function(path, db = NULL, sample = NULL, upstream = 0, downs
         peakLen = line[['end']] - line[['start']]
         peakMid = (line[['start']] + line[['end']])/2
         shortestLen = 999999999999
-        closest = data.frame()
-        for(i in 1:nrow(db.sub)) {
-            dbLine = db.sub[i, ]
-            if (nrow(dbLine) == 0) {
-                next;
+        distances = apply(db.sub, 1, function(x) {
+            if (x[['strand']] == '+') {
+                distance = peakMid - as.numeric(x[['txStart']])
+            } else {
+                distance = as.numeric(x[['txEnd']]) - peakMid
             }
-            if (is.na(dbLine[['strand']])){ #|| is.null(dbLine[['strand']])) {
-                next;
-            }
-            if ( dbLine[['strand']]== '+') {
-                geneStart = dbLine[['txStart']]
-                distance = peakMid - geneStart
-            } else if (dbLine[['strand']]== '-') {
-                geneStart = dbLine[['txEnd']]
-                distance = geneStart - peakMid
-            }
-            if (abs(distance) < abs(shortestLen)) {
-                shortestLen = distance
-                closest = dbLine
-                closest$distance = distance
-            }
+            return(distance)
+        })
+        if (length(distances) != nrow(db.sub)) {
+            print(length(distances))
+            print(nrow(db.sub))
+            stop("Something wrong in distance calculation")
         }
+        minIndex = which.min(abs(distances))
+        closest = db.sub[minIndex,]
+        closest$distance = distances[minIndex]
         closestGenes = rbind(closest, closestGenes)
     }
 # TODO: If possible, remove nested for loops

@@ -56,13 +56,11 @@ annotateFromDump <- function(path, db = NULL, sample = NULL, upstream = 0, downs
     bed$chr = paste('chr', bed$chr, sep='')
     bed$start = bed$start - upstream
     bed$end = bed$end + downstream
-# sampling bed file randomly
     if (is.null(sample)) {
-        bed = bed[sample(nrow(bed), 200),]
+        #bed = bed[sample(nrow(bed), 200),]
     } else {
         bed = bed[sample,]
     }
-# to hopefully speed up:
     numBins = floor(max(db$txStart)/1000000)
     binList = sapply(1:numBins, function(x) {
         #print(paste("<", x*1000000, ", >=", (x-1)*1000000, sep=''))
@@ -110,7 +108,6 @@ annotateFromDump <- function(path, db = NULL, sample = NULL, upstream = 0, downs
         closest$distance = distances[minIndex]
         closestGenes = rbind(closest, closestGenes)
     }
-# TODO: If possible, remove nested for loops
     return(closestGenes)
 }
 

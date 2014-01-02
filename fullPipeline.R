@@ -64,13 +64,12 @@ annotateFromDump <- function(path, db = NULL, sample = NULL, upstream = 0, downs
     }
 # to hopefully speed up:
     numBins = floor(max(db$txStart)/1000000)
-    binList = list()
-    for(x in 1:numBins) {
+    binList = sapply(1:numBins, function(x) {
         #print(paste("<", x*1000000, ", >=", (x-1)*1000000, sep=''))
         sub = subset(db, db$txStart < x*1000000)
         sub = subset(sub, sub$txStart >= (x-1)*1000000)
-        binList[[x]] = sub
-    }
+        return(sub)
+    })
 
     closestGenes = data.frame()
     message("starting comparison")
@@ -86,9 +85,9 @@ annotateFromDump <- function(path, db = NULL, sample = NULL, upstream = 0, downs
             message("3/4 done!")
 # to hopefully speed up, first subset by range, then by chr:
         binNumber = floor(line[['start']] / 1000000)
-        db.sub = binList[[binNumber]]
-        db.sub = rbind(db.sub, binList[[binNumber + 1]])
-        db.sub = rbind(db.sub, binList[[binNumber - 1]])
+        db.sub = binList[,binNumber]
+        db.sub = rbind(db.sub, binList[,binNumber + 1])
+        db.sub = rbind(db.sub, binList[,binNumber - 1])
         db.sub = subset(db.sub, chrom == line[['chr']])
         peakLen = line[['end']] - line[['start']]
         peakMid = (line[['start']] + line[['end']])/2

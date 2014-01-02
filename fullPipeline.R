@@ -65,19 +65,17 @@ annotateFromDump <- function(path, db = NULL, sample = NULL, upstream = 0, downs
 # to hopefully speed up:
     numBins = floor(max(db$txStart)/1000000)
     binList = list()
-    sapply(1:numBins, function(x, binList) {
+    for(x in 1:numBins) {
         #print(paste("<", x*1000000, ", >=", (x-1)*1000000, sep=''))
         sub = subset(db, db$txStart < x*1000000)
         sub = subset(sub, sub$txStart >= (x-1)*1000000)
         binList[[x]] = sub
-    }, binList)
+    }
 
-    #closestGenes = data.frame()
+    closestGenes = data.frame()
     message("starting comparison")
-    closestGenes = sapply(1:nrow(bed), function(j) {
+    for (j in 1:nrow(bed)) {
         line = bed[j,]
-        #print(line)
-        #print(j)
         if (j %% 10 == 0)
             message(paste(j,"done of", nrow(bed), "elements", sep=' '))
         if(j == floor(nrow(bed)/2))
@@ -111,8 +109,8 @@ annotateFromDump <- function(path, db = NULL, sample = NULL, upstream = 0, downs
         minIndex = which.min(abs(distances))
         closest = db.sub[minIndex,]
         closest$distance = distances[minIndex]
-        return(closest)
-    })
+        closestGenes = rbind(closest, closestGenes)
+    }
 # TODO: If possible, remove nested for loops
     return(closestGenes)
 }

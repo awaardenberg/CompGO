@@ -45,7 +45,7 @@ ucscDbDump <- function(db=NULL, session = NULL) {
     return(ucsc.table)
 }
 
-annotateFromDump <- function(path, db = NULL, upstream = 0, downstream = 0) {
+annotateFromDump <- function(path, db = NULL, sample = NULL, upstream = 0, downstream = 0) {
     require('rtracklayer')
     if(is.null(db)) {
         message("grabbing db dump, may take time...")
@@ -57,7 +57,11 @@ annotateFromDump <- function(path, db = NULL, upstream = 0, downstream = 0) {
     bed$start = bed$start - upstream
     bed$end = bed$end + downstream
 # sampling bed file randomly
-    #bed = bed[sample(nrow(bed), 200),]
+    if (is.null(sample)) {
+        bed = bed[sample(nrow(bed), 200),]
+    } else {
+        bed = bed[sample,]
+    }
 # to hopefully speed up:
     numBins = floor(max(db$txStart)/1000000)
     binList = list()
@@ -72,7 +76,7 @@ annotateFromDump <- function(path, db = NULL, upstream = 0, downstream = 0) {
     message("starting comparison")
     for (j in 1:nrow(bed)) {
         line = bed[j,]
-        if (j % 10 == 0)
+        if (j %% 10 == 0)
             message(paste(j,"done of", nrow(bed), "elements", sep=' '))
         if(j == floor(nrow(bed)/2))
             message("halfway!")

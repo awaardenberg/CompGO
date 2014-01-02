@@ -1,6 +1,5 @@
-require('biomaRt')
-require('RDAVIDWebService')
-require('rtracklayer')
+# R pipeline for GO analysis and gene annotation
+# by Sam Bassett, VCCRI, 2014
 
 # find unique genes among two sets
 getUniqueGenes <- function(setA, setB) {
@@ -10,6 +9,7 @@ getUniqueGenes <- function(setA, setB) {
 
 # genes is a list of genes in MGI symbol format to be converted
 mgiToEntrez <- function(genes) {
+    require('biomaRt')
     if (!exists('ensembl')) {
         ensembl <- useMart("ensembl", dataset="mmusculus_gene_ensembl")
     }
@@ -19,6 +19,7 @@ mgiToEntrez <- function(genes) {
 
 # bed contains chromosomal regions plus chrX
 bedToEntrez <- function(bed) {
+    require('biomaRt')
     if (!exists('ensembl')) {
         ensembl <- useMart("ensembl", dataset="mmusculus_gene_ensembl")
     }
@@ -29,29 +30,25 @@ bedToEntrez <- function(bed) {
 }
 
 ucscDbDump <- function(db=NULL, session = NULL) {
+    require('rtracklayer')
     if (is.null(session)) {
         session = browserSession("UCSC")
         genome(session) = 'mm9'
     }
     if (is.null(db)) {
-        print("getting reference...")
+        message("getting reference...")
         ucsc.db = ucscTableQuery(session, 'refGene', range = genome(session))
-        print("getting table...")
+        message("getting table...")
         ucsc.table = getTable(ucsc.db)
-        print("done!")
+        message("done!")
     }
     return(ucsc.table)
 }
 
-"'
-buildHashFromDump <- function(db) {
-    return(hash)
-}
-'"
-
 annotateFromDump <- function(path, db = NULL, upstream = 0, downstream = 0) {
+    require('rtracklayer')
     if(is.null(db)) {
-        print("grabbing db dump, may take time...")
+        message("grabbing db dump, may take time...")
         db = ucscDbDump()
     }
     bed = read.bed(path)
@@ -72,17 +69,17 @@ annotateFromDump <- function(path, db = NULL, upstream = 0, downstream = 0) {
     }
 
     closestGenes = data.frame()
-    print("starting comparison")
-    t = proc.time()
+    message("starting comparison")
     for (j in 1:nrow(bed)) {
         line = bed[j,]
-        print(paste(j,"done of", nrow(bed), "elements", sep=' '))
+        if (j % 10 == 0)
+            message(paste(j,"done of", nrow(bed), "elements", sep=' '))
         if(j == floor(nrow(bed)/2))
-            print("halfway!")
+            message("halfway!")
         if(j == floor(nrow(bed)/4))
-            print("quarter done!")
+            message("quarter done!")
         if(j == floor(3*nrow(bed)/4))
-            print("3/4 done!")
+            message("3/4 done!")
 # to hopefully speed up, first subset by range, then by chr:
         binNumber = floor(line[['start']] / 1000000)
         db.sub = binList[[binNumber]]
@@ -116,7 +113,6 @@ annotateFromDump <- function(path, db = NULL, upstream = 0, downstream = 0) {
         }
         closestGenes = rbind(closest, closestGenes)
     }
-    print(proc.time() - t)
 # TODO: If possible, remove nested for loops
     return(closestGenes)
 }
@@ -125,10 +121,10 @@ bedToGeneUCSC <- function(path, upstream=0, downstream=0, geneToBed = FALSE, ses
     require(rtracklayer)
     require(R.cache)
     if (is.null(session)) {
-        print("requesting session...")
+        message("requesting session...")
         session = browserSession("UCSC")
         genome(session) = 'mm9'
-        print("done!")
+        message("done!")
     }
     # set up ranges here from bed file
     range = import.bed(path)
@@ -141,11 +137,11 @@ bedToGeneUCSC <- function(path, upstream=0, downstream=0, geneToBed = FALSE, ses
         range = range[1:1000]
     }
     ucscTableQuery_mem = addMemoization(ucscTableQuery)
-    print("querying UCSC...")
+    message("querying UCSC...")
     key = list(track='refGene', range = range, table='refGene')
     tableQuery = loadCache(key)
     if(is.null(tableQuery)) {
-        print("cache miss =(")
+        #print("cache miss =(")
         tableQuery = memoizedCall(what=ucscTableQuery_mem, session, track='refGene', range = range, table='refGene')
         saveCache(tableQuery, key=key)
     }
@@ -155,14 +151,14 @@ bedToGeneUCSC <- function(path, upstream=0, downstream=0, geneToBed = FALSE, ses
         key = list(track='refGene', range = range2, table='refGene')
         tableQuery = loadCache(key)
         if(is.null(tableQuery)) {
-            print("cache miss =(")
+            #print("cache miss =(")
             tableQuery = memoizedCall(what=ucscTableQuery_mem, session, track='refGene', range = range2, table='refGene')
             saveCache(tableQuery, key=key)
         }
         table = rbind(table, getTable(tableQuery))
         range = c(range, range2)
     }
-    print("done!")
+    message("done!")
 # subtract 7kb from frame
     #start(ranges(range)) = start(ranges(range)) + 7000
     #end(ranges(range)) = end(ranges(range)) - 7000
@@ -175,7 +171,7 @@ bedToGeneUCSC <- function(path, upstream=0, downstream=0, geneToBed = FALSE, ses
     #table = transform(table, txStart = ifelse(strand == '-', txEnd, txStart))
     #table = transform(table, txEnd = ifelse(strand=='-', txStart, txEnd))
     if (geneToBed) {
-        print("performing gene-to-bed analysis...")
+        message("performing gene-to-bed analysis...")
         for (i in 1:nrow(table)) {
             chr_mid = subset(midpoints, chr = table[i, ]$chr)
             if (table[i,]$strand == '+') {
@@ -193,7 +189,7 @@ bedToGeneUCSC <- function(path, upstream=0, downstream=0, geneToBed = FALSE, ses
             finalTable = rbind(finalTable, minRow)
         }
     } else {
-        print("performing bed-to-gene analysis...")
+        message("performing bed-to-gene analysis...")
         for (i in 1:nrow(midpoints)) {
             chr_table = subset(table, chrom = midpoints[i, ]$chr)
 
@@ -217,7 +213,7 @@ bedToGeneUCSC <- function(path, upstream=0, downstream=0, geneToBed = FALSE, ses
             finalTable = rbind(finalTable, minRow)
         }
     }
-    print('done!')
+    message('done!')
     plot(density(subset(finalTable$distance, abs(finalTable$distance) < 10000), bw=400))
 
     return(finalTable)
@@ -235,14 +231,14 @@ bedToGeneDistance <- function(bed, upstream=0, downstream=0, verbose = FALSE) {
     #mid$chr = bed$V1
     #mid = bed$V2
     regions = paste(bed$V1, bed$V2, bed$V3, sep=":")
-    print("Querying...")
+    message("Querying...")
     query <- getBM(attributes=c('chromosome_name', 'start_position', 'end_position', 'strand', 'mgi_symbol'),
         filters = 'chromosomal_region', values = (regions), mart=ensembl, verbose = verbose)
-    print(head(query))
-    print(str(query))
+    #print(head(query))
+    #print(str(query))
     #query <- getBM_dump(attributes=c('transcript_start', 'mgi_symbol'), filters = 'chromosomal_region', values = (regions), mart=ensembl, verbose = verbose)
     #return(query)
-    print("Done!")
+    message("Done!")
     final = data.frame()
     for(i in 1:nrow(query)) {
         mid_chr = subset(mid, chr = query[i,]$chromosome_name)
@@ -279,10 +275,13 @@ read.bed <- function(path) {
 }
 
 getFnAnot_genome <- function(entrezlist, david = NULL, email = NULL, idType = "ENTREZ_GENE_ID", listName = "auto_list") {
+    require('RDAVIDWebService')
     if (is.null(david) && !is.null(email)) {
         david <- DAVIDWebService$new(email = email)
     }
-    print("uploading...")
+    if(!RDAVIDWebService::is.connected(david)) 
+        connect(david)
+    message("uploading...")
     addList(david, entrezlist, idType=idType, listType = "Gene", listName = listName)
     setAnnotationCategories(david, c("GOTERM_BP_ALL", "GOTERM_MF_ALL", "GOTERM_CC_ALL"))
 # to ensure genome-wide comparison
@@ -312,6 +311,7 @@ getClusterProfilerImages <- function(setA, setB, numCategories=25, organism="mou
 }
 
 compareDavidEnrichmentBackground <- function(geneSet, background, email, geneType="ENTREZ_GENE_ID") {
+    require('RDAVIDWebService')
     david <- DAVIDWebService$new(email=email)
     addList(david, geneSet, idType=geneType, listType="Gene", listName="auto_list")
     if (exists("background")) {
@@ -337,18 +337,19 @@ compareDavidEnrichmentBackground <- function(geneSet, background, email, geneTyp
 }
 
 plotPairwise <- function(setA, setB, benjaminiCutoff = NULL, pvalueCutoff = NULL, plotNA=FALSE, model='lm') {
+    require('RDAVIDWebService')
     if(class(setA) == 'DAVIDGODag') {
         setA_ben = pvalues(setA)
     } else if (class(setA)== 'DAVIDFunctionalAnnotationChart') {
         setA = extractGOFromAnnotation(setA)
-        setA_ben = setA$Benjamini
+        setA_ben = setA$PValue
         names(setA_ben) = setA$Term
     }
     if(class(setB) == 'DAVIDGODag') {
         setB_ben = pvalues(setB)
     } else if (class(setB) == 'DAVIDFunctionalAnnotationChart') {
         setB = extractGOFromAnnotation(setB)
-        setB_ben = setB$Benjamini
+        setB_ben = setB$PValue
         names(setB_ben) = setB$Term
     }
     #setA_comp = as.data.frame(setA_ben)
@@ -365,12 +366,14 @@ plotPairwise <- function(setA, setB, benjaminiCutoff = NULL, pvalueCutoff = NULL
     } else {
         comp = comp[complete.cases(comp),]
     }
-    print(cor(-log10(comp$setA_ben), -log10(comp$setB_ben)))
+    corr = cor(-log10(comp$setA_ben), -log10(comp$setB_ben))
+    corr = format(round(corr, 4), nsmall=4)
+    print(corr)
     #l = lm(-log10(setB_ben) ~ -log10(setA_ben), data=comp)
     #print(summary(l))
     p = ggplot(comp, aes(-log10(setA_ben), -log10(setB_ben)))
     #p = ggplot(comp, aes((setA_ben), (setB_ben)))
-    p + geom_point() + geom_smooth(method=model) #geom_abline(lm(comp$setA_ben ~ comp$setB_ben, data = comp))
+    p + geom_point() + geom_smooth(method=model) + geom_text(data = NULL, x = 5, y=12, label=paste("cor:", corr, sep=' '))
 }
 
 extractGOFromAnnotation <- function(fnAnot) {

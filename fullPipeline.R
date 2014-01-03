@@ -1,38 +1,32 @@
 # R pipeline for GO analysis and gene annotation
 # by Sam Bassett, VCCRI, 2014
 
-ucscDbDump <- function(db=NULL, session = NULL) {
+ucscDbDump <- function(session = NULL, genome='mm9', format = 'refGene') {
     require('rtracklayer')
     if (is.null(session)) {
         session = browserSession("UCSC")
-        genome(session) = 'mm9'
+        genome(session) = genome
     }
-    if (is.null(db)) {
-        message("getting reference...")
-        ucsc.db = ucscTableQuery(session, 'refGene', range = genome(session))
-        message("getting table...")
-        ucsc.table = getTable(ucsc.db)
-        message("done!")
-    }
+    message("getting reference...")
+    ucsc.db = ucscTableQuery(session, format, range = genome(session))
+    message("getting table...")
+    ucsc.table = getTable(ucsc.db)
+    message("done!")
     return(ucsc.table)
 }
 
-annotateBedFromUCSC <- function(path, db = NULL, sample = NULL, upstream = 0, downstream = 0) {
+annotateBedFromUCSC <- function(path, db = NULL, upstream = 0, downstream = 0) {
     require('rtracklayer')
     if(is.null(db)) {
         message("grabbing db dump, may take time...")
         db = ucscDbDump()
     }
+    message("Starting annotation, this process can take time (5 minutes on a .bed file with 1500 regions).")
     bed = read.bed(path)
     names(bed) = c('chr', 'start', 'end')
     bed$chr = paste('chr', bed$chr, sep='')
     bed$start = bed$start - upstream
     bed$end = bed$end + downstream
-    if (is.null(sample)) {
-        #bed = bed[sample(nrow(bed), 200),]
-    } else {
-        bed = bed[sample,]
-    }
     numBins = floor(max(db$txStart)/1000000)
     binList = sapply(1:numBins, function(x) {
         #print(paste("<", x*1000000, ", >=", (x-1)*1000000, sep=''))
@@ -42,17 +36,29 @@ annotateBedFromUCSC <- function(path, db = NULL, sample = NULL, upstream = 0, do
     })
 
     closestGenes = data.frame()
-    message("starting comparison")
+    start = proc.time()
+    time = vector()
     for (j in 1:nrow(bed)) {
         line = bed[j,]
-        if (j %% 10 == 0)
-            message(paste(j,"done of", nrow(bed), "elements", sep=' '))
-        if(j == floor(nrow(bed)/2))
+        if (j %% 10 == 0) {
+            message(paste(j,"done of", nrow(bed), "elements",'\r', sep=' '))
+            #currTime = proc.time() - start
+            #start = proc.time()
+            #time = append(time, currTime[['elapsed']])
+            #avg = mean(time, na.rm=TRUE)
+        }
+        if(j == floor(nrow(bed)/2)) {
             message("halfway!")
-        if(j == floor(nrow(bed)/4))
+            #message(paste("approx.", floor(avg*(nrow(bed)/10)/60), "minutes remaining", sep=' '))
+        }
+        if(j == floor(nrow(bed)/4)) {
             message("quarter done!")
-        if(j == floor(3*nrow(bed)/4))
+            #message(paste("approx.", floor(avg*(nrow(bed)/10)/60), "minutes remaining", sep=' '))
+        }
+        if(j == floor(3*nrow(bed)/4)) {
             message("3/4 done!")
+            #message(paste("approx.", floor(avg*(nrow(bed)/10)/60), "minutes remaining", sep=' '))
+        }
 # to hopefully speed up, first subset by range, then by chr:
         binNumber = floor(line[['start']] / 1000000)
         db.sub = as.data.frame(binList[,binNumber])
@@ -83,13 +89,15 @@ annotateBedFromUCSC <- function(path, db = NULL, sample = NULL, upstream = 0, do
     return(closestGenes)
 }
 
-read.bed <- function(path) {
+read.bed <- function(path, subChr = TRUE) {
     bed <- read.table(path)
-    bed$V1 = sub(pattern="chr", replacement="", bed$V1)
+    if (subChr) {
+        bed$V1 = sub(pattern="chr", replacement="", bed$V1)
+    }
     return(bed)
 }
 
-getFnAnot_genome <- function(entrezlist, david = NULL, email = NULL, idType = "ENTREZ_GENE_ID", listName = "auto_list") {
+getFnAnot_genome <- function(genelist, david = NULL, email = NULL, idType = "ENTREZ_GENE_ID", listName = "auto_list") {
     require('RDAVIDWebService')
     if (is.null(david) && !is.null(email)) {
         david <- DAVIDWebService$new(email = email)
@@ -97,7 +105,7 @@ getFnAnot_genome <- function(entrezlist, david = NULL, email = NULL, idType = "E
     if(!RDAVIDWebService::is.connected(david)) 
         connect(david)
     message("uploading...")
-    addList(david, entrezlist, idType=idType, listType = "Gene", listName = listName)
+    addList(david, genelist, idType=idType, listType = "Gene", listName = listName)
     setAnnotationCategories(david, c("GOTERM_BP_ALL", "GOTERM_MF_ALL", "GOTERM_CC_ALL"))
 # to ensure genome-wide comparison
     setCurrentBackgroundPosition(david, 1)
@@ -105,27 +113,39 @@ getFnAnot_genome <- function(entrezlist, david = NULL, email = NULL, idType = "E
     return(fnAnot)
 }
 
-plotPairwise <- function(setA, setB, benjaminiCutoff = NULL, pvalueCutoff = NULL, plotNA=FALSE, model='lm') {
+plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=FALSE, model='lm') {
     require('RDAVIDWebService')
     if(class(setA) == 'DAVIDGODag') {
         setA_ben = pvalues(setA)
     } else if (class(setA)== 'DAVIDFunctionalAnnotationChart') {
         setA = extractGOFromAnnotation(setA)
-        setA_ben = setA$PValue
+        if (useRawPvals) {
+            setA_ben = setA$PValue
+        } else {
+            setA_ben = setA$Benjamini
+        }
         names(setA_ben) = setA$Term
+    } else {
+        stop("SetA needs to be of type DAVIDFunctionalAnnotationChart")
     }
     if(class(setB) == 'DAVIDGODag') {
         setB_ben = pvalues(setB)
     } else if (class(setB) == 'DAVIDFunctionalAnnotationChart') {
         setB = extractGOFromAnnotation(setB)
-        setB_ben = setB$PValue
+        if (useRawPvals) {
+            setB_ben = setB$PValue
+        } else {
+            setB_ben = setB$Benjamini
+        }
         names(setB_ben) = setB$Term
+    } else {
+        stop("SetB needs to be of type DAVIDFunctionalAnnotationChart")
     }
     setA_comp = cbind(read.table(text=names(setA_ben)), setA_ben)
     setB_comp = cbind(read.table(text=names(setB_ben)), setB_ben)
-    if(!is.null(benjaminiCutoff) || !is.null(pvalueCutoff)) {
-        setA_comp = subset(setA_comp, setA_comp$setA_ben < benjaminiCutoff)
-        setB_comp = subset(setB_comp, setB_comp$setB_ben < benjaminiCutoff)
+    if(!is.null(cutoff)) {
+        setA_comp = subset(setA_comp, setA_comp$setA_ben < cutoff)
+        setB_comp = subset(setB_comp, setB_comp$setB_ben < cutoff)
     }
     comp = merge(setA_comp, setB_comp, all=TRUE)
     if(plotNA) {
@@ -150,8 +170,7 @@ extractGOFromAnnotation <- function(fnAnot) {
 }
 
 plotTwoGODags <- function (g1, g2, r1 = NULL, r2 = NULL, add.counts = TRUE, max.nchar = 60, node.colors = c(sig1 = "red", 
-    sig2 = "lightgreen", both="yellow", not = "white"), relaxPvals = FALSE, node.shape = "box", showBonferroni = FALSE, ...) 
-{
+    sig2 = "lightgreen", both="yellow", not = "white"), relaxPvals = FALSE, node.shape = "box", showBonferroni = FALSE, ...) {
 
     if (!require("Rgraphviz", quietly = TRUE)) 
         stop("The Rgraphviz package is required for this feature")

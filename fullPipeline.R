@@ -1,24 +1,6 @@
 # R pipeline for GO analysis and gene annotation
 # by Sam Bassett, VCCRI, 2014
 
-# find unique genes among two sets
-getUniqueGenes <- function(setA, setB) {
-    uniqs <- list(uniqA = setdiff(setA, setB), uniqB = setdiff(setB, setA))
-    return(uniqs)
-}
-
-# bed contains chromosomal regions plus chrX
-bedToEntrez <- function(bed) {
-    require('biomaRt')
-    if (!exists('ensembl')) {
-        ensembl <- useMart("ensembl", dataset="mmusculus_gene_ensembl")
-    }
-    regions = paste(bed$V1, bed$V2-7000, bed$V3+7000, sep=":")
-    query <- getBM(attributes='mgi_symbol', filters = 'chromosomal_region', values = regions, mart=ensembl)
-    #query = as.vector(query$entrezgene)
-    return(query)
-}
-
 ucscDbDump <- function(db=NULL, session = NULL) {
     require('rtracklayer')
     if (is.null(session)) {

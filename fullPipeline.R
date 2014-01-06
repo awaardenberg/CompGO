@@ -178,8 +178,28 @@ extractGOFromAnnotation <- function(fnAnot) {
     return(fnAnot)
 }
 
-plotTwoGODags <- function (g1, g2, r1 = NULL, r2 = NULL, add.counts = TRUE, max.nchar = 60, node.colors = c(sig1 = "red",
+plotTwoGODags <- function (anot1, anot2, r1 = NULL, r2 = NULL, add.counts = TRUE, max.nchar = 60, node.colors = c(sig1 = "red",
     sig2 = "lightgreen", both="yellow", not = "white"), relaxPvals = FALSE, node.shape = "box", showBonferroni = FALSE, ...) {
+    require('RDAVIDWebService')
+    "'
+    if(class(g1) == 'DAVIDFunctionalAnnotationChart') {
+        if (is.null(r1)) {
+            r1 = DAVIDGODag(g1)
+        }
+        g1 = goDag(DAVIDGODag(g1))
+    }
+
+    if(class(g2) == 'DAVIDFunctionalAnnotationChart') {
+        if (is.null(r2)) {
+            r2 = DAVIDGODag(g2)
+        }
+        g2 = goDag(DAVIDGODag(g2))
+    }
+    '"
+    r1 = DAVIDGODag(anot1)
+    r2 = DAVIDGODag(anot2)
+    g1 = goDag(r1)
+    g2 = goDag(r2)
 
     if (!require("Rgraphviz", quietly = TRUE))
         stop("The Rgraphviz package is required for this feature")

@@ -15,16 +15,22 @@ ucscDbDump <- function(session = NULL, genome='mm9', format = 'refGene') {
     return(ucsc.table)
 }
 
-annotateBedFromUCSC <- function(path, db = NULL, upstream = 0, downstream = 0) {
+annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL, upstream = 0, downstream = 0) {
+    if (!is.null(path) && !is.null(bedfile))
+        stop("Both bed and path supplied, please use only one.")
+    if (is.null(path) && is.null(bedfile))
+        stop("Please supply either the path to a .bed file or the raw bedfile")
     require('rtracklayer')
     if(is.null(db)) {
         message("grabbing db dump, may take time...")
         db = ucscDbDump()
     }
     message("Starting annotation, this process can take time (5 minutes on a .bed file with 1500 regions).")
-    bed = read.bed(path)
-    names(bed) = c('chr', 'start', 'end')
-    bed$chr = paste('chr', bed$chr, sep='')
+    if (is.null(bedfile)) {
+        bed = read.bed(path)
+    } else {
+        bed = bedfile
+    }
     bed$start = bed$start - upstream
     bed$end = bed$end + downstream
     numBins = floor(max(db$txStart)/1000000)
@@ -89,20 +95,23 @@ annotateBedFromUCSC <- function(path, db = NULL, upstream = 0, downstream = 0) {
     return(closestGenes)
 }
 
-read.bed <- function(path, subChr = TRUE) {
+read.bed <- function(path, subChr = FALSE) {
     bed <- read.table(path)
+    if (ncol(bed) > 3)
+        bed = bed[,1:3]
     if (subChr) {
         bed$V1 = sub(pattern="chr", replacement="", bed$V1)
     }
+    names(bed) = c('chr', 'start', 'end')
     return(bed)
 }
 
-getFnAnot_genome <- function(genelist, david = NULL, email = NULL, idType = "ENTREZ_GENE_ID", listName = "auto_list") {
+getFnAnot_genome <- function(genelist, david = NULL, email = NULL, idType = "REFSEQ_MRNA", listName = "auto_list") {
     require('RDAVIDWebService')
     if (is.null(david) && !is.null(email)) {
         david <- DAVIDWebService$new(email = email)
     }
-    if(!RDAVIDWebService::is.connected(david)) 
+    if(!RDAVIDWebService::is.connected(david))
         connect(david)
     message("uploading...")
     addList(david, genelist, idType=idType, listType = "Gene", listName = listName)
@@ -169,10 +178,10 @@ extractGOFromAnnotation <- function(fnAnot) {
     return(fnAnot)
 }
 
-plotTwoGODags <- function (g1, g2, r1 = NULL, r2 = NULL, add.counts = TRUE, max.nchar = 60, node.colors = c(sig1 = "red", 
+plotTwoGODags <- function (g1, g2, r1 = NULL, r2 = NULL, add.counts = TRUE, max.nchar = 60, node.colors = c(sig1 = "red",
     sig2 = "lightgreen", both="yellow", not = "white"), relaxPvals = FALSE, node.shape = "box", showBonferroni = FALSE, ...) {
 
-    if (!require("Rgraphviz", quietly = TRUE)) 
+    if (!require("Rgraphviz", quietly = TRUE))
         stop("The Rgraphviz package is required for this feature")
 # get three sets of GO terms, one for each and then a union
     n1 = nodes(g1)
@@ -187,14 +196,14 @@ plotTwoGODags <- function (g1, g2, r1 = NULL, r2 = NULL, add.counts = TRUE, max.
         termLab = nall
     }
 # applies a substring if the user supplies a max term length
-    if (!is.null(max.nchar)) 
+    if (!is.null(max.nchar))
         termLab <- sapply(termLab, substr, 1L, max.nchar, USE.NAMES = FALSE)
 # creates vector with length number of nodes and values "white" (by default) for colouring
     ncolors <- rep(node.colors["not"], length(nall))
     if (!is.null(r1) && !is.null(r2) && add.counts) {
 # checks values of node colour argument
-        if (is.null(names(node.colors)) || !all(c("sig1","sig2","both","not") %in% 
-            names(node.colors))) 
+        if (is.null(names(node.colors)) || !all(c("sig1","sig2","both","not") %in%
+            names(node.colors)))
             stop(paste("invalid node.colors arg:", "must have named elements 'sig1', 'sig2', 'both' and 'not'"))
 # extracts goterms with pvalues from r
         resultTerms1 <- names(pvalues(r1))
@@ -202,13 +211,13 @@ plotTwoGODags <- function (g1, g2, r1 = NULL, r2 = NULL, add.counts = TRUE, max.
         resultTermsAll = union(resultTerms1, resultTerms2)
 # if n is a significant term in r, give ncolors the sig. colour, else not sig. colour
         if (relaxPvals) {
-            ncolors <-  ifelse(!nall %in% union(sigCategories(r1), sigCategories(r2)), node.colors["not"], 
-                        ifelse(nall %in% intersect(names(pvalues(r1)), names(pvalues(r2))), node.colors["both"], 
-                        ifelse(nall %in% names(pvalues(r1)), node.colors["sig1"], 
+            ncolors <-  ifelse(!nall %in% union(sigCategories(r1), sigCategories(r2)), node.colors["not"],
+                        ifelse(nall %in% intersect(names(pvalues(r1)), names(pvalues(r2))), node.colors["both"],
+                        ifelse(nall %in% names(pvalues(r1)), node.colors["sig1"],
                         ifelse(nall %in% names(pvalues(r2)), node.colors["sig2"],
                         node.colors["not"]))))
         } else {
-            ncolors <- ifelse(nall %in% intersect(sigCategories(r1), sigCategories(r2)), node.colors["both"], 
+            ncolors <- ifelse(nall %in% intersect(sigCategories(r1), sigCategories(r2)), node.colors["both"],
                 ifelse(nall %in% sigCategories(r1), node.colors["sig1"], ifelse(nall %in% sigCategories(r2), node.colors["sig2"],
                 node.colors["not"])))
         }
@@ -223,10 +232,10 @@ plotTwoGODags <- function (g1, g2, r1 = NULL, r2 = NULL, add.counts = TRUE, max.
                 #paste(geneCounts(r1)[x]+geneCounts(r2)[x],"/",universeCounts(r1)[x]+universeCounts(r2)[x],
                     #sep="")
             } else if (x %in% resultTerms1) {
-                paste(geneCounts(r1)[x], "/", universeCounts(r1)[x], 
+                paste(geneCounts(r1)[x], "/", universeCounts(r1)[x],
                   sep = "")
             } else if (x %in% resultTerms2) {
-                paste(geneCounts(r2)[x], "/", universeCounts(r2)[x], 
+                paste(geneCounts(r2)[x], "/", universeCounts(r2)[x],
                   sep = "")
             } else {
                 "0/??"
@@ -249,7 +258,7 @@ plotTwoGODags <- function (g1, g2, r1 = NULL, r2 = NULL, add.counts = TRUE, max.
     print(length(grep("white", ncolors)))
 # uses Rgraphviz
 # for each node in g, give it label nlab etc...
-    nattr <- makeNodeAttrs(join(g1, g2), label = nlab, shape = node.shape, 
+    nattr <- makeNodeAttrs(join(g1, g2), label = nlab, shape = node.shape,
         fillcolor = ncolors, fixedsize = FALSE)
 # plot the tree!
     plot(join(g1,g2), ..., nodeAttrs = nattr)

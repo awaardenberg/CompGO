@@ -97,6 +97,13 @@ annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL, upstream
     return(closestGenes)
 }
 
+plotDistanceDistribution <- function(distanceList, bw = NULL, to = 10000, from = -10000, probeOverlay = NULL) {
+# We got the best results with bw=300
+    plot(density(distanceList, bw = bw, from = from, to = to, na.rm=TRUE))
+    if(!is.null(probeOverlay))
+        lines(density(probeOverlay, from = from, to = to))
+}
+
 read.bed <- function(path, subChr = FALSE) {
     bed <- read.table(path)
     if (ncol(bed) > 3)

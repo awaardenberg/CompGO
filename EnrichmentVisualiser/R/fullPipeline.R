@@ -152,48 +152,44 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
         }
     }
     #require('RDAVIDWebService')
-    if(class(setA) == 'DAVIDGODag') {
-        setA_ben = pvalues(setA)
-    } else if (class(setA)== 'DAVIDFunctionalAnnotationChart') {
+    if (class(setA)== 'DAVIDFunctionalAnnotationChart') {
         setA = extractGOFromAnnotation(setA)
         if (useRawPvals) {
-            setA_ben = setA$PValue
+            setA_val = setA$PValue
         } else if (plotFoldEnrichment) {
-            setA_ben = setA$Fold.Enrichment
+            setA_val = setA$Fold.Enrichment
         } else {
-            setA_ben = setA$Benjamini
+            setA_val = setA$Benjamini
         }
-        names(setA_ben) = setA$Term
+        names(setA_val) = setA$Term
     } else {
         stop("SetA needs to be of type DAVIDFunctionalAnnotationChart")
     }
-    if(class(setB) == 'DAVIDGODag') {
-        setB_ben = pvalues(setB)
-    } else if (class(setB) == 'DAVIDFunctionalAnnotationChart') {
+    if (class(setB) == 'DAVIDFunctionalAnnotationChart') {
         setB = extractGOFromAnnotation(setB)
         if (useRawPvals) {
-            setB_ben = setB$PValue
+            setB_val = setB$PValue
         } else if (plotFoldEnrichment) {
-            setB_ben = setB$Fold.Enrichment
+            setB_val = setB$Fold.Enrichment
         } else {
-            setB_ben = setB$Benjamini
+            setB_val = setB$Benjamini
         }
-        names(setB_ben) = setB$Term
+        names(setB_val) = setB$Term
     } else {
         stop("SetB needs to be of type DAVIDFunctionalAnnotationChart")
     }
 
-    setA_comp = cbind(read.table(text=names(setA_ben)), setA_ben)
-    setB_comp = cbind(read.table(text=names(setB_ben)), setB_ben)
+    setA_comp = cbind(read.table(text=names(setA_val)), setA_val)
+    setB_comp = cbind(read.table(text=names(setB_val)), setB_val)
     "'
     if(!is.null(cutoff)) {
-        setA_comp = subset(setA_comp, setA_comp$setA_ben < cutoff)
-        setB_comp = subset(setB_comp, setB_comp$setB_ben < cutoff)
+        setA_comp = subset(setA_comp, setA_comp$setA_val < cutoff)
+        setB_comp = subset(setB_comp, setB_comp$setB_val < cutoff)
     }
     '"
     comp = merge(setA_comp, setB_comp, all=TRUE)
     if(!is.null(cutoff)) {
-        comp = subset(comp, (setA_ben < cutoff | setB_ben < cutoff))
+        comp = subset(comp, (setA_val < cutoff | setB_val < cutoff))
     }
     if(plotNA) {
         comp[is.na(comp)] <- 1
@@ -201,17 +197,17 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
         comp = comp[complete.cases(comp),]
     }
     if (plotFoldEnrichment) {
-        corr = cor(comp$setA_ben, comp$setB_ben)
+        corr = cor(comp$setA_val, comp$setB_val)
     } else {
-        corr = cor(-log10(comp$setA_ben), -log10(comp$setB_ben))
+        corr = cor(-log10(comp$setA_val), -log10(comp$setB_val))
     }
     corr = format(round(corr, 4), nsmall=4)
     print(corr)
     if(plotFoldEnrichment) {
-        p = ggplot(comp, aes(setA_ben, setB_ben))
+        p = ggplot(comp, aes(setA_val, setB_val))
         p + geom_point() + geom_smooth(method=model) + geom_text(data = NULL, x = 5, y=9, label=paste("cor:", corr, sep=' '))
     } else {
-        p = ggplot(comp, aes(-log10(setA_ben), -log10(setB_ben)))
+        p = ggplot(comp, aes(-log10(setA_val), -log10(setB_val)))
         p + geom_point() + geom_smooth(method=model) + geom_text(data = NULL, x = 5, y=9, label=paste("cor:", corr, sep=' '))
     }
 }

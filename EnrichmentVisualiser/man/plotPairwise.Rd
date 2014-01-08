@@ -10,6 +10,7 @@
     \item{useRawPvals}{If false, uses adjusted p-values, otherwise uses the raw ones}
     \item{plotNA}{If true, any GO term present in only one list is considered to have a p-value of 1 in the other; otherwise, it is simply removed}
     \item{model}{The model to use when plotting linear fit, default 'lm'}
+    \item{subset}{If a specific ontology (MF, BP, CC) is wanted rather than all terms, supply it here as a string}
 }
 
 \value{Does not return, but generates a plot}

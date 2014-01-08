@@ -131,7 +131,24 @@ getFnAnot_genome <- function(genelist, david = NULL, email = NULL, idType = "REF
     return(fnAnot)
 }
 
-plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=FALSE, model='lm') {
+subOntology <- function(set, ont) {
+    if(class(set) != "DAVIDFunctionalAnnotationChart")
+        stop("Set must be of type DAVIDFunctionalAnnotationChart")
+    set = subset(set, grepl(paste("GOTERM", ont, "ALL"), set$Category, ignore.case = TRUE))
+    set = DAVIDFunctionalAnnotationChart(set)
+    return(set)
+}
+
+plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=FALSE, model='lm', ontology=NULL) {
+    if(!is.null(ontology)) {
+        if(ontology %in% c("BP", "MF", "CC")) {
+            setA = subOntology(setA, ontology)
+            setB = subOntology(setB, ontology)
+        } else {
+            stop("Ontology must be one of BP, MF or CC")
+        }
+    }
+    print(setA)
     #require('RDAVIDWebService')
     if(class(setA) == 'DAVIDGODag') {
         setA_ben = pvalues(setA)
@@ -159,6 +176,7 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
     } else {
         stop("SetB needs to be of type DAVIDFunctionalAnnotationChart")
     }
+
     setA_comp = cbind(read.table(text=names(setA_ben)), setA_ben)
     setB_comp = cbind(read.table(text=names(setB_ben)), setB_ben)
     if(!is.null(cutoff)) {

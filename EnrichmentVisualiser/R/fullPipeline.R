@@ -15,7 +15,7 @@ ucscDbDump <- function(session = NULL, genome='mm9', format = 'refGene') {
     return(ucsc.table)
 }
 
-annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL, upstream = 0, downstream = 0) {
+annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL, upstream = 0, downstream = 0, threshold = 10000) {
     if (!is.null(path) && !is.null(bedfile))
         stop("Both bed and path supplied, please use only one.")
     if (is.null(path) && is.null(bedfile))
@@ -25,7 +25,6 @@ annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL, upstream
         message("grabbing db dump, may take time...")
         db = ucscDbDump()
     }
-    message("Starting annotation, this process can take time (5 minutes on a .bed file with 1500 regions).")
     if (is.null(bedfile)) {
         bed = read.bed(path)
     } else {
@@ -36,36 +35,39 @@ annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL, upstream
     bed$start = bed$start - upstream
     bed$end = bed$end + downstream
     numBins = floor(max(db$txStart)/1000000)
+    message("Creating bins...")
     binList = sapply(1:numBins, function(x) {
         #print(paste("<", x*1000000, ", >=", (x-1)*1000000, sep=''))
         sub = subset(db, db$txStart < x*1000000)
         sub = subset(sub, sub$txStart >= (x-1)*1000000)
         return(sub)
     })
+    message("Done!")
 
     closestGenes = data.frame()
     start = proc.time()
     time = vector()
-   for (j in 1:nrow(bed)) {
+    message("Starting annotation, this process can take time (5 minutes on a .bed file with 1500 regions).")
+    for (j in 1:nrow(bed)) {
         line = bed[j,]
         if (j %% 10 == 0) {
             message(paste(j,"done of", nrow(bed), "elements",'\r', sep=' '))
-            #currTime = proc.time() - start
-            #start = proc.time()
-            #time = append(time, currTime[['elapsed']])
-            #avg = mean(time, na.rm=TRUE)
+            currTime = proc.time() - start
+            start = proc.time()
+            time = append(time, currTime[['elapsed']])
+            avg = mean(time, na.rm=TRUE)
         }
         if(j == floor(nrow(bed)/2)) {
             message("halfway!")
-            #message(paste("approx.", floor(avg*(nrow(bed)/10)/60), "minutes remaining", sep=' '))
+            message(paste("approx.", floor(avg*((nrow(bed)-j)/10)/60), "minutes remaining", sep=' '))
         }
         if(j == floor(nrow(bed)/4)) {
             message("quarter done!")
-            #message(paste("approx.", floor(avg*(nrow(bed)/10)/60), "minutes remaining", sep=' '))
+            message(paste("approx.", floor(avg*((nrow(bed)-j)/10)/60), "minutes remaining", sep=' '))
         }
         if(j == floor(3*nrow(bed)/4)) {
             message("3/4 done!")
-            #message(paste("approx.", floor(avg*(nrow(bed)/10)/60), "minutes remaining", sep=' '))
+            message(paste("approx.", floor(avg*((nrow(bed)-j)/10)/60), "minutes remaining", sep=' '))
         }
 # to hopefully speed up, first subset by range, then by chr:
         binNumber = floor(line[['start']] / 1000000)
@@ -94,6 +96,7 @@ annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL, upstream
         closest$distance = distances[minIndex]
         closestGenes = rbind(closest, closestGenes)
     }
+    closestGenes = subset(closestGenes, abs(closestGenes$distance) < threshold)
     return(closestGenes)
 }
 
@@ -127,19 +130,19 @@ getFnAnot_genome <- function(genelist, david = NULL, email = NULL, idType = "REF
     setAnnotationCategories(david, c("GOTERM_BP_ALL", "GOTERM_MF_ALL", "GOTERM_CC_ALL"))
 # to ensure genome-wide comparison
     setCurrentBackgroundPosition(david, 1)
-    fnAnot <- getFunctionalAnnotationChart(david)
+    fnAnot <- getFunctionalAnnotationChart(david, threshold=1)
     return(fnAnot)
 }
 
 subOntology <- function(set, ont) {
     if(class(set) != "DAVIDFunctionalAnnotationChart")
         stop("Set must be of type DAVIDFunctionalAnnotationChart")
-    set = subset(set, grepl(paste("GOTERM", ont, "ALL"), set$Category, ignore.case = TRUE))
+    set = subset(set, grepl(ont, set$Category) == TRUE)
     set = DAVIDFunctionalAnnotationChart(set)
     return(set)
 }
 
-plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=FALSE, model='lm', ontology=NULL) {
+plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=FALSE, model='lm', ontology=NULL, plotFoldEnrichment = FALSE) {
     if(!is.null(ontology)) {
         if(ontology %in% c("BP", "MF", "CC")) {
             setA = subOntology(setA, ontology)
@@ -148,7 +151,6 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
             stop("Ontology must be one of BP, MF or CC")
         }
     }
-    print(setA)
     #require('RDAVIDWebService')
     if(class(setA) == 'DAVIDGODag') {
         setA_ben = pvalues(setA)
@@ -156,6 +158,8 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
         setA = extractGOFromAnnotation(setA)
         if (useRawPvals) {
             setA_ben = setA$PValue
+        } else if (plotFoldEnrichment) {
+            setA_ben = setA$Fold.Enrichment
         } else {
             setA_ben = setA$Benjamini
         }
@@ -169,6 +173,8 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
         setB = extractGOFromAnnotation(setB)
         if (useRawPvals) {
             setB_ben = setB$PValue
+        } else if (plotFoldEnrichment) {
+            setB_ben = setB$Fold.Enrichment
         } else {
             setB_ben = setB$Benjamini
         }
@@ -179,22 +185,35 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
 
     setA_comp = cbind(read.table(text=names(setA_ben)), setA_ben)
     setB_comp = cbind(read.table(text=names(setB_ben)), setB_ben)
+    "'
     if(!is.null(cutoff)) {
         setA_comp = subset(setA_comp, setA_comp$setA_ben < cutoff)
         setB_comp = subset(setB_comp, setB_comp$setB_ben < cutoff)
     }
+    '"
     comp = merge(setA_comp, setB_comp, all=TRUE)
+    if(!is.null(cutoff)) {
+        comp = subset(comp, (setA_ben < cutoff | setB_ben < cutoff))
+    }
     if(plotNA) {
         comp[is.na(comp)] <- 1
     } else {
         comp = comp[complete.cases(comp),]
     }
-    corr = cor(-log10(comp$setA_ben), -log10(comp$setB_ben))
+    if (plotFoldEnrichment) {
+        corr = cor(comp$setA_ben, comp$setB_ben)
+    } else {
+        corr = cor(-log10(comp$setA_ben), -log10(comp$setB_ben))
+    }
     corr = format(round(corr, 4), nsmall=4)
     print(corr)
-    #print(summary(l))
-    p = ggplot(comp, aes(-log10(setA_ben), -log10(setB_ben)))
-    p + geom_point() + geom_smooth(method=model) + geom_text(data = NULL, x = 5, y=12, label=paste("cor:", corr, sep=' '))
+    if(plotFoldEnrichment) {
+        p = ggplot(comp, aes(setA_ben, setB_ben))
+        p + geom_point() + geom_smooth(method=model) + geom_text(data = NULL, x = 5, y=9, label=paste("cor:", corr, sep=' '))
+    } else {
+        p = ggplot(comp, aes(-log10(setA_ben), -log10(setB_ben)))
+        p + geom_point() + geom_smooth(method=model) + geom_text(data = NULL, x = 5, y=9, label=paste("cor:", corr, sep=' '))
+    }
 }
 
 extractGOFromAnnotation <- function(fnAnot) {

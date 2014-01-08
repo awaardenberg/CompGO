@@ -1,0 +1,6 @@
+export(annotateBedFromUCSC)
+export(getFnAnot_genome)
+export(plotPairwise)
+export(plotTwoGODags)
+export(read.bed)
+export(ucscDbDump)

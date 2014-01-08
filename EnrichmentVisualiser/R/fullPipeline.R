@@ -181,13 +181,27 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
 
     setA_comp = cbind(read.table(text=names(setA_val)), setA_val)
     setB_comp = cbind(read.table(text=names(setB_val)), setB_val)
-    "'
-    if(!is.null(cutoff)) {
-        setA_comp = subset(setA_comp, setA_comp$setA_val < cutoff)
-        setB_comp = subset(setB_comp, setB_comp$setB_val < cutoff)
-    }
-    '"
     comp = merge(setA_comp, setB_comp, all=TRUE)
+
+    for(i in 1:nrow(comp)) {
+        geneA = subset(setA, Term == comp[i,]$V1)$Genes
+        geneB = subset(setB, Term == comp[i,]$V1)$Genes
+        geneA = strsplit(geneA, ', ')
+        geneB = strsplit(geneB, ', ')
+        if(length(geneA) == 0 | length(geneB) == 0) {
+            comp[i,"jaccard"] = 0
+            next
+        }
+# needed for list->vector
+        names(geneA) = "a"
+        names(geneB) = "b"
+        geneA = as.vector(geneA$a)
+        geneB = as.vector(geneB$b)
+        n = intersect(geneA, geneB)
+        u = union(geneA, geneB)
+        comp[i, "jaccard"] = length(n)/length(u)
+    }
+
     if(!is.null(cutoff)) {
         comp = subset(comp, (setA_val < cutoff | setB_val < cutoff))
     }
@@ -205,15 +219,14 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
     print(corr)
     if(plotFoldEnrichment) {
         p = ggplot(comp, aes(setA_val, setB_val))
-        p + geom_point() + geom_smooth(method=model) + geom_text(data = NULL, x = 5, y=9, label=paste("cor:", corr, sep=' '))
     } else {
-        p = ggplot(comp, aes(-log10(setA_val), -log10(setB_val)))
-        p + geom_point() + geom_smooth(method=model) + geom_text(data = NULL, x = 5, y=9, label=paste("cor:", corr, sep=' '))
+        p = ggplot(comp, aes(-log10(comp$setA_val), -log10(comp$setB_val)))
     }
+    p + geom_point() + geom_smooth(method=model) + geom_text(data = NULL, x = 5, y=9, label=paste("cor:", corr, sep=' '))
 }
 
 extractGOFromAnnotation <- function(fnAnot) {
-    fnAnot = subset(fnAnot, select=-Genes)
+    #fnAnot = subset(fnAnot, select=-Genes)
     fnAnot$Term = sapply(fnAnot$Term, function(x) {
         sub("(GO:[^~]+)~.*$","\\1", x)
     })

@@ -22,10 +22,12 @@ We provide the UCSC mm9 refGene database as a data file, but if a different trac
 ## Get UCSC database for human genome, refGene track
 library(CompGO)
 db = ucscDbDump(genome="hg19")
+str(db)
 @
 
 \section{.bed file importing and annotation}
-Reading a .bed file into R is easy: \begin{verbatim}
+Reading a .bed file into R is easy:
+\begin{verbatim}
 ## Not run, needs path
 bed = read.bed('./path_to_file.bed')
 ## Sometimes, such as when using biomaRt, the chromosome
@@ -33,14 +35,13 @@ bed = read.bed('./path_to_file.bed')
 bed = read.bed('./path_to_file.bed', subChr=TRUE)
 \end{verbatim}
 Once a .bed file is read, you can start annotation. Here we use the sample .bed file provided.
-\begin{verbatim}
-require('EnrichmentVisualiser')
+<<>>=
 data(bed.sample)
 data(ucsc.mm9)
 ## This step can take some time
 geneList = annotateBedFromUCSC(bedfile=bed.sample,db=ucsc.mm9)
 str(geneList)
-\end{verbatim}
+@
 
 \section{Functional Enrichment and visualisation}
 This gene list can then be passed on to DAVID for gene ontology enrichment analysis. This returns an object of type DAVIDFunctionalAnnotationChart, but it can be accessed similarly to a data.frame.
@@ -53,15 +54,14 @@ str(fnAnot)
 
 After obtaining an enrichment table, we can visualise differences between two sets of genes (or two .bed files) using either a pairwise scatterplot or a combination directed acyclic graph (DAG), where each node (representing an individual GO term) is coloured based on which set it came from.
 \begin{verbatim}
-## Since this requires multiple annotation files, 
-## which we have not supplied, the following won't be run.
+## Since this requires email registration, the following won't be run.
 anot1 = getFnAnot_genome(geneList1, email="email@email.com")
 anot2 = getFnAnot_genome(geneList2, email="email@email.com")
 
 ## To produce scatterplot:
 plotPairwise(anot1, anot2, cutoff = 0.05) # using benjamini as metric
 # plotting all GO terms, even if they only appear in one set
-plotPairwise(anot1, anot2, plotNA=TRUE, cutoff=0.1) 
+plotPairwise(anot1, anot2, plotNA=TRUE, cutoff=0.1)
 
 ## For DAGs:
 plotTwoGODags(anot1, anot2) # no relaxation, default colours

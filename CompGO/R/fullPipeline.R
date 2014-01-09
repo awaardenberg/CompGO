@@ -5,8 +5,8 @@
 #' @description This function downloads a full dump of the specified genome in the specified format and returns it as a data.frame
 #' @param session If a session has already been requested, it can be passed into the function here
 #' @param genome The genome to grab from UCSC, default 'mm9' for mmusculus
-#' @param The format, or track, to download from UCSC. Default refGene
-#' @value Returns a data.frame containing the entire genome as downloaded from UCSC
+#' @param format The format, or track, to download from UCSC. Default refGene
+#' @return Returns a data.frame containing the entire genome as downloaded from UCSC
 #' @export
 #' @examples
 #'    db = ucscDbDump()
@@ -30,15 +30,16 @@ ucscDbDump <- function(session = NULL, genome='mm9', format = 'refGene') {
 #' @param path The system path to a .bed file
 #' @param bedfile If the user has a .bed file already loaded in R, they can supply it here rather than re-importing it
 #' @param db A data.frame containing the complete genome regions of the target organism, must be in the format returned by ucscDbDump
+#' @param threshold The distance threshold at which to cut genes; if a gene is further away than this, it is discounted.
 #' @details This function can take some time to run. It performs some optimisation, but it still has to search a portion of a full genome for each input coordinate. The closest gene is determined by the distance from its start point to the midpoint of the supplied coordinate. It corrects for genes on the '-' strand in this calculation as well.
 #' @export
-#' @value A data.frame of the closest genes to each .bed region, plus the distance between this gene and the midpoint of the region.
+#' @return A data.frame of the closest genes to each .bed region, plus the distance between this gene and the midpoint of the region.
 #' @examples
 #'   data(ucsc.mm9)
 #'   data(bed.sample)
 #'   x = annotateBedFromUCSC(bedfile = bed.sample, db = ucsc.mm9)
 #'   str(x)
-annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL, upstream = 0, downstream = 0, threshold = 10000) {
+annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL, threshold = 10000) {
     if (!is.null(path) && !is.null(bedfile))
         stop("Both bed and path supplied, please use only one.")
     if (is.null(path) && is.null(bedfile))
@@ -55,8 +56,8 @@ annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL, upstream
     }
     # sample file
     #bed = bed[sample(nrow(bed), 50),]
-    bed$start = bed$start - upstream
-    bed$end = bed$end + downstream
+    #bed$start = bed$start - upstream
+    #bed$end = bed$end + downstream
     numBins = floor(max(db$txStart)/1000000)
     message("Creating bins...")
     binList = sapply(1:numBins, function(x) {
@@ -73,7 +74,7 @@ annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL, upstream
     message("Starting annotation, this process can take time (5 minutes on a .bed file with 1500 regions).")
     for (j in 1:nrow(bed)) {
         line = bed[j,]
-        if (j %% 10 == 0) {
+        if (j == 1 | j %% 10 == 0) {
             message(paste(j,"done of", nrow(bed), "elements",'\r', sep=' '))
             currTime = proc.time() - start
             start = proc.time()
@@ -135,7 +136,7 @@ annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL, upstream
 #'   data(ucsc.mm9)
 #'   data(bed.sample)
 #'   geneList = annotateBedFromUCSC(bedfile=bed.sample, db=ucsc.mm9)
-#'   plotDistanceDistribution(geneList$distances, bw=300)
+#'   plotDistanceDistribution(geneList$distance, bw=300)
 plotDistanceDistribution <- function(distanceList, bw = NULL, to = 10000, from = -10000, probeOverlay = NULL) {
 # We got the best results with bw=300
     plot(density(distanceList, bw = bw, from = from, to = to, na.rm=TRUE))
@@ -146,7 +147,7 @@ plotDistanceDistribution <- function(distanceList, bw = NULL, to = 10000, from =
 #' @description Reads in a .bed file as a data.frame, replaces chr* with * if subChr is true (in case needed for biomaRt or something)
 #' @param path The system path to a .bed file
 #' @param subChr if true, s/chr([^)]+)/$1/
-#' @value A data.frame of the .bed coordinates
+#' @return A data.frame of the .bed coordinates
 #' @examples
 #'   ## not really relevant as system path is required
 read.bed <- function(path, subChr = FALSE) {
@@ -169,16 +170,17 @@ read.bed <- function(path, subChr = FALSE) {
 #'      their WebService API. This can be accomplished online, then the registered email supplied here.
 #' @param idType The type of gene IDs being uploaded (MGI, Entrez,...)
 #' @param listName The name to give the list when it's uploaded to the WebService
-#' @value Returns a DAVIDFunctionalAnnotationChart after generating it by comparing the supplied gene list to the full
+#' @return Returns a DAVIDFunctionalAnnotationChart after generating it by comparing the supplied gene list to the full
 #'      genome as a background
 #' @examples
 #'   ## not run because registration is required
-#'   dontrun{
-#'      fnAnot = getFnAnot_genome(entrezList, email = "your.registered@email.com",
+#'   \dontrun{
+#'      fnAnot = getFnAnot_genome(entrezList, email = "your.registered@@email.com",
 #'          idType="ENTREZ_GENE_ID", listName="My_gene_list-1")
-#'      david = DAVIDWebService$new(email = "your.registered@email.com")
+#'      david = DAVIDWebService$new(email = "your.registered@@email.com")
 #'          fnAnot = getFnAnot_genome(entrezList, david = david)
-getFnAnot_genome <- function(genelist, david = NULL, email = NULL, idType = "REFSEQ_MRNA", listName = "auto_list") {
+#'   }
+getFnAnot_genome <- function(geneList, david = NULL, email = NULL, idType = "REFSEQ_MRNA", listName = "auto_list") {
     #require('RDAVIDWebService')
     if (is.null(david) && !is.null(email)) {
         david <- DAVIDWebService$new(email = email)
@@ -186,7 +188,7 @@ getFnAnot_genome <- function(genelist, david = NULL, email = NULL, idType = "REF
     if(!RDAVIDWebService::is.connected(david))
         connect(david)
     message("uploading...")
-    addList(david, genelist, idType=idType, listType = "Gene", listName = listName)
+    addList(david, geneList, idType=idType, listType = "Gene", listName = listName)
     setAnnotationCategories(david, c("GOTERM_BP_ALL", "GOTERM_MF_ALL", "GOTERM_CC_ALL"))
 # to ensure genome-wide comparison
     setCurrentBackgroundPosition(david, 1)
@@ -205,18 +207,19 @@ subOntology <- function(set, ont) {
 #' @title Generates a scatterplot of two sets of GO terms
 #' @description Generates a -log10 scatterplot of two sets of GO terms by p-value or corrected p-value with linear fit and correlation
 #' @export
-#' @param set[AB] DAVIDFunctionalAnnotationChart objects to compare against each other
+#' @param setA DAVIDFunctionalAnnotationChart object to compare
+#' @param setB DAVIDFunctionalAnnotationChart object to compare
 #' @param cutoff The p-value or adjusted p-value to use as a cutoff
 #' @param useRawPvals If false, uses adjusted p-values, otherwise uses the raw ones
 #' @param plotNA If true, any GO term present in only one list is considered to have a p-value of 1 in the other; otherwise, it is simply removed
 #' @param model The model to use when plotting linear fit, default 'lm'
-#' @param subset If a specific ontology (MF, BP, CC) is wanted rather than all terms, supply it here as a string
+#' @param ontology If a specific ontology (MF, BP, CC) is wanted rather than all terms, supply it here as a string
 #' @examples
 #' \dontrun{
 #'      ## This is not run because it requires the entire pathway to be complete beforehand, which takes too long.
 #'      plotPairwise(fnAnot.list1, fnAnot.list2, cutoff=0.05)
 #' }
-plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=FALSE, model='lm', ontology=NULL, plotFoldEnrichment = FALSE) {
+plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=FALSE, model='lm', ontology=NULL) {
     if(!is.null(ontology)) {
         if(ontology %in% c("BP", "MF", "CC")) {
             setA = subOntology(setA, ontology)
@@ -312,6 +315,11 @@ extractGOFromAnnotation <- function(fnAnot) {
 #' @param node.colors The colours to display each node
 #' @param relaxPvals See details
 #' @param ont The ontology to use, one of BP, MF and CC
+#' @param add.counts Whether to add counts of each GO term to the nodes in the graph
+#' @param max.nchar Maximum length of GO term to print
+#' @param node.shape The shape of nodes to print on the graph
+#' @param showBonferroni Whether to show the corrected P value on each node
+#' @param ... Further arguments to pass to plot
 #' @export
 #' @details Allows the relaxation of pvalues in order to control for thresholding - if the cutoff is, say, 0.05 and one term is present at 0.049 and the other at 0.051, with relaxPvals FALSE
 #'    this will show up as a term significantly enriched in one and not the other. This is an adaptation of code supplied by the package RDAVIDWebService under function plotGOTermGraph.
@@ -322,7 +330,7 @@ extractGOFromAnnotation <- function(fnAnot) {
 #'      ## The entire pathway must be run for this example to work, which takes too long for compilation.
 #'      plotTwoGODags(fnAnot.geneList1, fnAnot.geneList2)
 #' }
-plotTwoGODags <- function (anot1, anot2, r1 = NULL, r2 = NULL, add.counts = TRUE, max.nchar = 60, node.colors = c(sig1 = "red",
+plotTwoGODags <- function (anot1, anot2, add.counts = TRUE, max.nchar = 60, node.colors = c(sig1 = "red",
     sig2 = "lightgreen", both="yellow", not = "white"), relaxPvals = FALSE, node.shape = "box", showBonferroni = FALSE, ont = "BP",...) {
     #require('RDAVIDWebService')
     if(class(anot1) != 'DAVIDFunctionalAnnotationChart') {
@@ -337,8 +345,8 @@ plotTwoGODags <- function (anot1, anot2, r1 = NULL, r2 = NULL, add.counts = TRUE
     g1 = goDag(r1)
     g2 = goDag(r2)
 
-    if (!require("Rgraphviz", quietly = TRUE))
-        stop("The Rgraphviz package is #required for this feature")
+    #if (!require("Rgraphviz", quietly = TRUE))
+        #stop("The Rgraphviz package is #required for this feature")
 # get three sets of GO terms, one for each and then a union
     n1 = nodes(g1)
     n2 = nodes(g2)

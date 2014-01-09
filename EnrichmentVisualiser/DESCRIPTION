@@ -1,5 +1,5 @@
 Package: EnrichmentVisualiser
-Version: 0.1
+Version: 0.99
 Date: 2014-01-03
 Title: An R pipeline for .bed file annotation, GO term enrichment and data visualisation
 Author: Sam Bassett

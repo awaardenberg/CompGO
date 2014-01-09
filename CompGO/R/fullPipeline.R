@@ -1,6 +1,16 @@
 # R pipeline for GO analysis and gene annotation
 # by Sam Bassett, VCCRI, 2014
 
+#' @title Dump the UCSC database for a specified genome
+#' @description This function downloads a full dump of the specified genome in the specified format and returns it as a data.frame
+#' @param session If a session has already been requested, it can be passed into the function here
+#' @param genome The genome to grab from UCSC, default 'mm9' for mmusculus
+#' @param The format, or track, to download from UCSC. Default refGene
+#' @value Returns a data.frame containing the entire genome as downloaded from UCSC
+#' @export
+#' @examples
+#'    db = ucscDbDump()
+#'    head(db)
 ucscDbDump <- function(session = NULL, genome='mm9', format = 'refGene') {
     #require('rtracklayer')
     if (is.null(session)) {
@@ -15,6 +25,19 @@ ucscDbDump <- function(session = NULL, genome='mm9', format = 'refGene') {
     return(ucsc.table)
 }
 
+#' @title Annotate .bed file with closest genes
+#' @description Takes coordinates from a .bed file and a data.frame of genes, then maps each coordinate to its closest gene and calculates the distance.
+#' @param path The system path to a .bed file
+#' @param bedfile If the user has a .bed file already loaded in R, they can supply it here rather than re-importing it
+#' @param db A data.frame containing the complete genome regions of the target organism, must be in the format returned by ucscDbDump
+#' @details This function can take some time to run. It performs some optimisation, but it still has to search a portion of a full genome for each input coordinate. The closest gene is determined by the distance from its start point to the midpoint of the supplied coordinate. It corrects for genes on the '-' strand in this calculation as well.
+#' @export
+#' @value A data.frame of the closest genes to each .bed region, plus the distance between this gene and the midpoint of the region.
+#' @examples
+#'   data(ucsc.mm9)
+#'   data(bed.sample)
+#'   x = annotateBedFromUCSC(bedfile = bed.sample, db = ucsc.mm9)
+#'   str(x)
 annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL, upstream = 0, downstream = 0, threshold = 10000) {
     if (!is.null(path) && !is.null(bedfile))
         stop("Both bed and path supplied, please use only one.")
@@ -100,13 +123,32 @@ annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL, upstream
     return(closestGenes)
 }
 
+#' @title Generates and plots a kernal density estimate of distances
+#' @description From a list of distances (such as distances of .bed regions from the start of transcription), this function generates a KDE
+#' @param distanceList A vector of distances to plot
+#' @param bw The badnwidth used by the KDE
+#' @param to The upper limit used by KDE
+#' @param from The lower limit used by KDE
+#' @param probeOverlay A vector containing the probe density so it may be compared with the distance density
+#' @export
+#' @examples
+#'   data(ucsc.mm9)
+#'   data(bed.sample)
+#'   geneList = annotateBedFromUCSC(bedfile=bed.sample, db=ucsc.mm9)
+#'   plotDistanceDistribution(geneList$distances, bw=300)
 plotDistanceDistribution <- function(distanceList, bw = NULL, to = 10000, from = -10000, probeOverlay = NULL) {
 # We got the best results with bw=300
     plot(density(distanceList, bw = bw, from = from, to = to, na.rm=TRUE))
     if(!is.null(probeOverlay))
         lines(density(probeOverlay, from = from, to = to))
 }
-
+#' @title Reads in a .bed file as a data.frame
+#' @description Reads in a .bed file as a data.frame, replaces chr* with * if subChr is true (in case needed for biomaRt or something)
+#' @param path The system path to a .bed file
+#' @param subChr if true, s/chr([^)]+)/$1/
+#' @value A data.frame of the .bed coordinates
+#' @examples
+#'   ## not really relevant as system path is required
 read.bed <- function(path, subChr = FALSE) {
     bed <- read.table(path)
     if (ncol(bed) > 3)
@@ -118,6 +160,24 @@ read.bed <- function(path, subChr = FALSE) {
     return(bed)
 }
 
+#' @title Get the functional annotation table of a gene list using DAVID
+#' @description Uploads a gene list to DAVID, then does a GO enrichment analysis using the genome as the background. Requires registration with DAVID first.
+#' @export
+#' @param geneList A list of genes to upload and functionally enrich
+#' @param david An RDAVIDWebService object can be passed to the function so a new one doesn't have to be requested each time
+#' @param email If david==NULL, an email must be supplied. DAVID requires (free) registration before users may interact with
+#'      their WebService API. This can be accomplished online, then the registered email supplied here.
+#' @param idType The type of gene IDs being uploaded (MGI, Entrez,...)
+#' @param listName The name to give the list when it's uploaded to the WebService
+#' @value Returns a DAVIDFunctionalAnnotationChart after generating it by comparing the supplied gene list to the full
+#'      genome as a background
+#' @examples
+#'   ## not run because registration is required
+#'   dontrun{
+#'      fnAnot = getFnAnot_genome(entrezList, email = "your.registered@email.com",
+#'          idType="ENTREZ_GENE_ID", listName="My_gene_list-1")
+#'      david = DAVIDWebService$new(email = "your.registered@email.com")
+#'          fnAnot = getFnAnot_genome(entrezList, david = david)
 getFnAnot_genome <- function(genelist, david = NULL, email = NULL, idType = "REFSEQ_MRNA", listName = "auto_list") {
     #require('RDAVIDWebService')
     if (is.null(david) && !is.null(email)) {
@@ -142,6 +202,20 @@ subOntology <- function(set, ont) {
     return(set)
 }
 
+#' @title Generates a scatterplot of two sets of GO terms
+#' @description Generates a -log10 scatterplot of two sets of GO terms by p-value or corrected p-value with linear fit and correlation
+#' @export
+#' @param set[AB] DAVIDFunctionalAnnotationChart objects to compare against each other
+#' @param cutoff The p-value or adjusted p-value to use as a cutoff
+#' @param useRawPvals If false, uses adjusted p-values, otherwise uses the raw ones
+#' @param plotNA If true, any GO term present in only one list is considered to have a p-value of 1 in the other; otherwise, it is simply removed
+#' @param model The model to use when plotting linear fit, default 'lm'
+#' @param subset If a specific ontology (MF, BP, CC) is wanted rather than all terms, supply it here as a string
+#' @examples
+#' \dontrun{
+#'      ## This is not run because it requires the entire pathway to be complete beforehand, which takes too long.
+#'      plotPairwise(fnAnot.list1, fnAnot.list2, cutoff=0.05)
+#' }
 plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=FALSE, model='lm', ontology=NULL, plotFoldEnrichment = FALSE) {
     if(!is.null(ontology)) {
         if(ontology %in% c("BP", "MF", "CC")) {
@@ -231,6 +305,23 @@ extractGOFromAnnotation <- function(fnAnot) {
     return(fnAnot)
 }
 
+#' @title Plots a directed acyclic graph of GO terms from two different sources
+#' @description Plots a directed acyclic graph of GO terms from two different sources, using colour to show intersection and difference
+#' @param anot1 A DAVIDFunctionalAnnotationChart object
+#' @param anot2 A DAVIDFunctionalAnnotationChart object
+#' @param node.colors The colours to display each node
+#' @param relaxPvals See details
+#' @param ont The ontology to use, one of BP, MF and CC
+#' @export
+#' @details Allows the relaxation of pvalues in order to control for thresholding - if the cutoff is, say, 0.05 and one term is present at 0.049 and the other at 0.051, with relaxPvals FALSE
+#'    this will show up as a term significantly enriched in one and not the other. This is an adaptation of code supplied by the package RDAVIDWebService under function plotGOTermGraph.
+#' @references Fresno, C. and Fernandes, E. (2013) RDAVIDWebService: An R Package for retrieving data from DAVID into R objects using Web Services API.
+#'      \url{http://david.abcc.ncifcrf.gov/}
+#' @examples
+#' \dontrun{
+#'      ## The entire pathway must be run for this example to work, which takes too long for compilation.
+#'      plotTwoGODags(fnAnot.geneList1, fnAnot.geneList2)
+#' }
 plotTwoGODags <- function (anot1, anot2, r1 = NULL, r2 = NULL, add.counts = TRUE, max.nchar = 60, node.colors = c(sig1 = "red",
     sig2 = "lightgreen", both="yellow", not = "white"), relaxPvals = FALSE, node.shape = "box", showBonferroni = FALSE, ont = "BP",...) {
     #require('RDAVIDWebService')

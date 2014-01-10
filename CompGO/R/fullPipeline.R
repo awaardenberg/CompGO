@@ -7,7 +7,7 @@
 #' @param genome The genome to grab from UCSC, default 'mm9' for mmusculus
 #' @param format The format, or track, to download from UCSC. Default refGene
 #' @return Returns a data.frame containing the entire genome as downloaded from UCSC
-# @import rtracklayer
+#' @importFrom rtracklayer browserSession ucscTableQuery getTable
 #' @export
 #' @examples
 #'    #db = ucscDbDump() # not run, no point grabbing an entire genome each time this is compiled
@@ -36,7 +36,6 @@ ucscDbDump <- function(session = NULL, genome='mm9', format = 'refGene') {
 #' @param threshold The distance threshold at which to cut genes; if a gene is further away than this, it is discounted.
 #' @details This function can take some time to run. It performs some optimisation, but it still has to search a portion of a full genome for each input coordinate. The closest gene is determined by the distance from its start point to the midpoint of the supplied coordinate. It corrects for genes on the '-' strand in this calculation as well.
 #' @export
-# @import rtracklayer
 #' @return A data.frame of the closest genes to each .bed region, plus the distance between this gene and the midpoint of the region.
 #' @examples
 #'   data(ucsc.mm9)
@@ -168,6 +167,8 @@ read.bed <- function(path, subChr = FALSE) {
 #' @title Get the functional annotation table of a gene list using DAVID
 #' @description Uploads a gene list to DAVID, then does a GO enrichment analysis using the genome as the background. Requires registration with DAVID first.
 #' @export
+#' @importFrom RDAVIDWebService connect is.connected addList setAnnotationCategories setCurrentBackgroundPosition getFunctionalAnnotationChart
+#' @importClassesFrom RDAVIDWebService DAVIDWebService
 #' @param geneList A list of genes to upload and functionally enrich
 #' @param david An RDAVIDWebService object can be passed to the function so a new one doesn't have to be requested each time
 #' @param email If david==NULL, an email must be supplied. DAVID requires (free) registration before users may interact with
@@ -211,8 +212,7 @@ subOntology <- function(set, ont) {
 #' @title Generates a scatterplot of two sets of GO terms
 #' @description Generates a -log10 scatterplot of two sets of GO terms by p-value or corrected p-value with linear fit and correlation
 #' @export
-# @import RDAVIDWebService
-# @import ggplot2
+#' @importFrom ggplot2 scale_colour_gradient2 geom_point theme ggplot
 #' @param setA DAVIDFunctionalAnnotationChart object to compare
 #' @param setB DAVIDFunctionalAnnotationChart object to compare
 #' @param cutoff The p-value or adjusted p-value to use as a cutoff
@@ -234,7 +234,6 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
             stop("Ontology must be one of BP, MF or CC")
         }
     }
-    #require('RDAVIDWebService')
     if (class(setA)== 'DAVIDFunctionalAnnotationChart') {
         setA = extractGOFromAnnotation(setA)
         if (useRawPvals) {
@@ -327,8 +326,8 @@ extractGOFromAnnotation <- function(fnAnot) {
 #' @param showBonferroni Whether to show the corrected P value on each node
 #' @param ... Further arguments to pass to plot
 #' @export
-# @import RDAVIDWebService
-# @import Rgraphviz
+#' @importFrom RDAVIDWebService DAVIDFunctionalAnnotationChart DAVIDGODag goDag nodes nodeData nodeDataDefaults sigCategories pvalues geneCounts universeCounts bonferronis
+#' @importFrom Rgraphviz makeNodeAttrs
 #' @details Allows the relaxation of pvalues in order to control for thresholding - if the cutoff is, say, 0.05 and one term is present at 0.049 and the other at 0.051, with relaxPvals FALSE
 #'    this will show up as a term significantly enriched in one and not the other. This is an adaptation of code supplied by the package RDAVIDWebService under function plotGOTermGraph.
 #' @references Fresno, C. and Fernandes, E. (2013) RDAVIDWebService: An R Package for retrieving data from DAVID into R objects using Web Services API.

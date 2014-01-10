@@ -23,7 +23,9 @@ This function downloads a full dump of the specified genome
 in the specified format and returns it as a data.frame
 }
 \examples{
-db = ucscDbDump()
+#db = ucscDbDump() # not run, no point grabbing an entire genome each time this is compiled
+   data(ucsc.mm9) #instead, this is equivalent
+   db = ucsc.mm9
    head(db)
 }
 

@@ -14,7 +14,8 @@
 \maketitle
 \section*{Abstract}
 %revise
-Finding a good method for comparing gene ontology (GO) enrichments between lists of genes is an important problem for functional comparison. Here, several tools are presented that accomplish this task, with their respective benefits and downsides examined. An in-house method of comparing enrichment analyses between sets, CompGO, is also developed. The R package RDAVIDWebService emerges as the best overall service to use, due to its flexibility; DAVID is also enhanced to cover gene set enrichment analysis comparison through the R package CompGO.
+Finding a good method for comparing gene ontology (GO) enrichments between lists of genes is an important problem for functional comparison. Here, several tools are presented that accomplish this task, with their respective benefits and downsides examined. An in-house method of comparing enrichment analyses between sets, CompGO, is also developed. CompGO draws methodologies from the existing approaches, but enhances their analytic potential to include comparisons of gene sets. This enables both similarities and differences between sets to be brought forth that would otherwise not be immediately obvious from superficial comparison.
+
 \section*{Introduction}
 Gene Ontology was conceived as the "tool for the unification of biology", since it provides a vocabulary for gene function that is applicable to all eukaryotes \cite{GOConsort00}. Genes have terms assigned to them in three broad categories, namely biological process, molecular function and cellular component, and can have varying degrees of specificity - from the very broad, such as "cell", right down to the very specific.\\
 Many online tools have emerged in order to help perform both gene ontology annotation and enrichment analysis, then subsequently visualise the results. They all perform similar functions, but each has their own advantages and downsides. One restriction worth mentioning is that the experimental data used to test the tools did not come from an either an Affymetrix or other similar gene chip, which many tools actually require for the first step of analysis; such tools have not been reviewed here.\\
@@ -59,8 +60,7 @@ First, a plot of $p$ values from two different enrichment tables can be performe
 The other method, adapted from code sourced in the RDAVIDWebService package, is plotting a DAG where individual nodes (representing GO terms) are given colour based on the gene set from which they came. Again, the plotting function is flexible, and this approach aids in seeing specifically which enriched terms come from which set, and which ones are common to both.
 
 \section*{Conclusion}
-% revise
-Judging by their features, the RDAVIDWebService package is the optimal service to use, since it is easy to extend and modify to do exactly what is required by the user. The comparisons that it can generate are in-depth and useful. However, it does require knowledge of R; with that in mind, the best web service to use is GOEAST due to its enhanced statistical functionality and ease of use. 
+The ability to compare gene ontologies between different experiments or organisms is both useful and currently nascent. We present a package, CompGO, which builds upon current approaches used by DAVID to perform enrichment analysis on single gene sets and extends them to compare gene sets pairwise, then visually compare the results. In our own analysis, this allowed 
 
 
 \begin{thebibliography}{}

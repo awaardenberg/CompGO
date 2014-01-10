@@ -7,6 +7,7 @@
 #' @param genome The genome to grab from UCSC, default 'mm9' for mmusculus
 #' @param format The format, or track, to download from UCSC. Default refGene
 #' @return Returns a data.frame containing the entire genome as downloaded from UCSC
+# @import rtracklayer
 #' @export
 #' @examples
 #'    #db = ucscDbDump() # not run, no point grabbing an entire genome each time this is compiled
@@ -35,6 +36,7 @@ ucscDbDump <- function(session = NULL, genome='mm9', format = 'refGene') {
 #' @param threshold The distance threshold at which to cut genes; if a gene is further away than this, it is discounted.
 #' @details This function can take some time to run. It performs some optimisation, but it still has to search a portion of a full genome for each input coordinate. The closest gene is determined by the distance from its start point to the midpoint of the supplied coordinate. It corrects for genes on the '-' strand in this calculation as well.
 #' @export
+# @import rtracklayer
 #' @return A data.frame of the closest genes to each .bed region, plus the distance between this gene and the midpoint of the region.
 #' @examples
 #'   data(ucsc.mm9)
@@ -209,6 +211,8 @@ subOntology <- function(set, ont) {
 #' @title Generates a scatterplot of two sets of GO terms
 #' @description Generates a -log10 scatterplot of two sets of GO terms by p-value or corrected p-value with linear fit and correlation
 #' @export
+# @import RDAVIDWebService
+# @import ggplot2
 #' @param setA DAVIDFunctionalAnnotationChart object to compare
 #' @param setB DAVIDFunctionalAnnotationChart object to compare
 #' @param cutoff The p-value or adjusted p-value to use as a cutoff
@@ -323,6 +327,8 @@ extractGOFromAnnotation <- function(fnAnot) {
 #' @param showBonferroni Whether to show the corrected P value on each node
 #' @param ... Further arguments to pass to plot
 #' @export
+# @import RDAVIDWebService
+# @import Rgraphviz
 #' @details Allows the relaxation of pvalues in order to control for thresholding - if the cutoff is, say, 0.05 and one term is present at 0.049 and the other at 0.051, with relaxPvals FALSE
 #'    this will show up as a term significantly enriched in one and not the other. This is an adaptation of code supplied by the package RDAVIDWebService under function plotGOTermGraph.
 #' @references Fresno, C. and Fernandes, E. (2013) RDAVIDWebService: An R Package for retrieving data from DAVID into R objects using Web Services API.
@@ -429,51 +435,3 @@ plotTwoGODags <- function (anot1, anot2, add.counts = TRUE, max.nchar = 60, node
 # plot the tree!
     plot(join(g1,g2), ..., nodeAttrs = nattr)
 }
-
-# generate clusterProfiler images/pdfs in current directory comparing BP, MF, CC of two gene sets, A and B
-getClusterProfilerImages <- function(setA, setB, numCategories=25, organism="mouse", width=25, height=25) {
-    #require('clusterProfiler')
-    setList <- list(setA = setA, setB = setB)
-# produce images for ontologies, advised not to use for loop
-    pdf("./automatically_generated_ontology.pdf")
-
-#print("Generating BP...")
-    cmpList <- compareCluster(setList, fun="enrichGO", organism=organism, ont="BP")
-    plot(cmpList, showCategory=numCategories)
-
-#print("Generating MF...")
-    cmpList <- compareCluster(setList, fun="enrichGO", organism=organism, ont="MF")
-    plot(cmpList, showCategory=numCategories)
-
-#print("Generating CC...")
-    cmpList <- compareCluster(setList, fun="enrichGO", organism=organism, ont="CC")
-    plot(cmpList, showCategory=numCategories)
-    dev.off()
-}
-
-compareDavidEnrichmentBackground <- function(geneSet, background, email, geneType="ENTREZ_GENE_ID") {
-    #require('RDAVIDWebService')
-    david <- DAVIDWebService$new(email=email)
-    addList(david, geneSet, idType=geneType, listType="Gene", listName="auto_list")
-    if (exists("background")) {
-        addList(david, geneSet, idType=geneType, listType="Background", listName="auto_bg")
-    }
-    setAnnotationCategories(david, c("GOTERM_BP_ALL", "GOTERM_MF_ALL", "GOTERM_CC_ALL"))
-    fnAnot <- getFunctionalAnnotationChart(david)
-
-    goDag <- DAVIDGODag(fnAnot, pvalueCutoff=0.05, 'BP')
-    pdf("./auto_generated_DAVID_BP.pdf")
-    plotGOTermGraph(g=goDag(goDag), r = goDag, node.shape='box')
-    dev.off()
-
-    goDag <- DAVIDGODag(fnAnot, pvalueCutoff=0.05, 'MF')
-    pdf("./auto_generated_DAVID_MF.pdf")
-    plotGOTermGraph(g=goDag(goDag), r = goDag, node.shape='box')
-    dev.off()
-
-    goDag <- DAVIDGODag(fnAnot, pvalueCutoff=0.05, 'CC')
-    pdf("./auto_generated_DAVID_CC.pdf")
-    plotGOTermGraph(g=goDag(goDag), r = goDag, node.shape='box')
-    dev.off()
-}
-

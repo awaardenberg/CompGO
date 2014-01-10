@@ -12,9 +12,9 @@ Version: 0.99.0
 Author: Sam Bassett
 Maintainer: Sam Bassett <S.Bassett@victorchang.edu.au>
 License: GPL-2
-Depends:
-    rtracklayer
 Imports:
+    rtracklayer,
     RDAVIDWebService,
-    Rgraphviz
+    Rgraphviz,
+    ggplot2
 biocViews: Annotation, Bioinformatics

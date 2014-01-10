@@ -12,9 +12,11 @@
 
 \begin{document}
 \maketitle
+%\VignetteIndexEntry{Introduction}
 \section{Introduction}
 This package contains functions to accomplish several tasks. It is able to download full genome databases from UCSC, import .bed files easily, annotate these .bed file regions with genes (plus distance) from aforementioned database dumps, interface with DAVID to create functional annotation and gene ontology enrichment charts based on gene lists (such as those generated from input .bed files) and finally visualise and compare these enrichments using either directed acyclic graphs or scatterplots.
 
+%\VignetteIndexEntry{Dumping UCSC databases}
 \section{Dumping UCSC databases}
 We provide the UCSC mm9 refGene database as a data file, but if a different track is needed this function can be used to do so. It can sometimes take some time to run, since it's downloading a large file.
 
@@ -28,6 +30,7 @@ db = ucsc.mm9
 str(db)
 @
 
+%\VignetteIndexEntry{.bed file importing and annotation}
 \section{.bed file importing and annotation}
 Reading a .bed file into R is easy:
 \begin{verbatim}
@@ -45,6 +48,7 @@ geneList = annotateBedFromUCSC(bedfile=bed.sample,db=ucsc.mm9)
 str(geneList)
 @
 
+%\VignetteIndexEntry{Functional Enrichment and visualisation}
 \section{Functional Enrichment and visualisation}
 This gene list can then be passed on to DAVID for gene ontology enrichment analysis. This returns an object of type DAVIDFunctionalAnnotationChart, but it can be accessed similarly to a data.frame.
 \begin{verbatim}

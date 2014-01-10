@@ -1,9 +1,0 @@
-annotateBedFromUCSC	annotateBedFromUCSC
-bed.sample	bed.sample
-getFnAnot_genome	getFnAnot_genome
-plotDistanceDistribution	plotDistanceDistribution
-plotPairwise	plotPairwise
-plotTwoGODags	plotTwoGODags
-read.bed	read.bed
-ucsc.mm9	ucsc.mm9
-ucscDbDump	ucscDbDump

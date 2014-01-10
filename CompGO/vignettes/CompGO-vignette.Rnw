@@ -5,7 +5,7 @@
 \usepackage{amssymb}
 \usepackage[affil-it]{authblk}
 
-\title{EnrichmentVisualiser vignette}
+\title{CompGO vignette}
 \author{Sam Bassett}
 \affil{Developmental and Stem Cell Biology Lab,\\Victor Chang Cardiac Research Institute,\\Darlinghurst, Sydney, Australia}
 \date{}
@@ -21,7 +21,12 @@ We provide the UCSC mm9 refGene database as a data file, but if a different trac
 <<>>=
 ## Get UCSC database for human genome, refGene track
 library(CompGO)
-db = ucscDbDump(genome="hg19")
+## Instead of using bandwidth downloading a full genome,
+## we provide here something functionally identical but
+## which doesn't require network access
+## db = ucscDbDump(genome="mm9") # identical to:
+data(ucsc.mm9)
+db = ucsc.mm9
 str(db)
 @
 

@@ -1,0 +1,15 @@
+annotateBedFromUCSC     Annotate .bed file with closest genes
+bed.sample              A sample of 25 rows from a .bed file of mm9
+                        regions
+getFnAnot_genome        Get the functional annotation table of a gene
+                        list using DAVID
+plotDistanceDistribution
+                        Generates and plots a kernal density estimate
+                        of distances
+plotPairwise            Generates a scatterplot of two sets of GO terms
+plotTwoGODags           Plots a directed acyclic graph of GO terms from
+                        two different sources
+read.bed                Reads in a .bed file as a data.frame
+ucsc.mm9                A database dump of the UCSC mm9 refGene track
+                        for use in annotation
+ucscDbDump              Dump the UCSC database for a specified genome

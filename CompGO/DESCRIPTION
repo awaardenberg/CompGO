@@ -1,6 +1,6 @@
 Package: CompGO
-Title: An R pipeline for .bed file annotation, comparing GO term enrichment
-    between gene sets and data visualisation
+Title: An R pipeline for .bed file annotation, comparing GO term
+        enrichment between gene sets and data visualisation
 Description: This package contains functions to accomplish several tasks. It is
     able to download full genome databases from UCSC, import .bed files easily,
     annotate these .bed file regions with genes (plus distance) from
@@ -12,9 +12,8 @@ Version: 0.99.0
 Author: Sam Bassett
 Maintainer: Sam Bassett <S.Bassett@victorchang.edu.au>
 License: GPL-2
-Depends:
-    rtracklayer
-Imports:
-    RDAVIDWebService,
-    Rgraphviz
+Depends: rtracklayer
+Imports: RDAVIDWebService, Rgraphviz
+Suggests: knitr
 biocViews: Annotation, Bioinformatics
+Built: R 3.0.2; ; 2014-01-10 00:06:58 UTC; unix

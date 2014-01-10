@@ -9,7 +9,10 @@
 #' @return Returns a data.frame containing the entire genome as downloaded from UCSC
 #' @export
 #' @examples
-#'    db = ucscDbDump()
+#'    ## db = ucscDbDump() #rather than downloading the entire genome when documentation installed,
+#'                         # this is funtionally equivalent:
+#'    data(ucsc.mm9)
+#'    db = ucsc.mm9
 #'    head(db)
 ucscDbDump <- function(session = NULL, genome='mm9', format = 'refGene') {
     #require('rtracklayer')

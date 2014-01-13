@@ -38,10 +38,11 @@ registration with DAVID first.
 \examples{
 ## not run because registration is required
   \dontrun{
-     fnAnot = getFnAnot_genome(entrezList, email = "your.registered@email.com",
+     fnAnot = getFnAnot_genome(entrezList,
+         email = "your.registered@email.com",
          idType="ENTREZ_GENE_ID", listName="My_gene_list-1")
      david = DAVIDWebService$new(email = "your.registered@email.com")
-         fnAnot = getFnAnot_genome(entrezList, david = david)
+     fnAnot = getFnAnot_genome(entrezList, david = david)
   }
 }
 

@@ -47,7 +47,8 @@ plotGOTermGraph.
 }
 \examples{
 \dontrun{
-     ## The entire pathway must be run for this example to work, which takes too long for compilation.
+     # The entire pathway must be run for this example to work,
+     # which takes too long for compilation.
      plotTwoGODags(fnAnot.geneList1, fnAnot.geneList2)
 }
 }

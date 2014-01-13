@@ -10,11 +10,12 @@ Description: This package contains functions to accomplish several tasks. It is
     these enrichments using either directed acyclic graphs or scatterplots.
 Version: 0.99.0
 Authors@R: c(person("Sam", "Bassett", role = 'aut',
-                email='S.Bassett@victorchang.edu.au'),
-            person("Ash", "Waardenberg", role=c('aut', 'cre'),
-                email='A.Waardenberg@victorchang.edu.au'))
+    email='S.Bassett@victorchang.edu.au'),
+    person("Ash", "Waardenberg", role=c('aut', 'cre'),
+    email='A.Waardenberg@victorchang.edu.au'))
 License: GPL-2
-Depends: RDAVIDWebService
+Depends:
+    RDAVIDWebService
 Imports:
     rtracklayer,
     Rgraphviz,

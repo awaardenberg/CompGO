@@ -10,8 +10,10 @@
 # @import rtracklayer
 #' @export
 #' @examples
-#'    #db = ucscDbDump() # not run, no point grabbing an entire genome each time this is compiled
-#'    data(ucsc.mm9) #instead, this is equivalent
+#'    # following line not run, as there's no point
+#'    # grabbing an entire genome each time this is compiled
+#'    #db = ucscDbDump()
+#'    data(ucsc.mm9) # instead, this is equivalent.
 #'    db = ucsc.mm9
 #'    head(db)
 ucscDbDump <- function(session = NULL, genome='mm9', format = 'refGene') {
@@ -179,10 +181,11 @@ read.bed <- function(path, subChr = FALSE) {
 #' @examples
 #'   ## not run because registration is required
 #'   \dontrun{
-#'      fnAnot = getFnAnot_genome(entrezList, email = "your.registered@@email.com",
+#'      fnAnot = getFnAnot_genome(entrezList,
+#'          email = "your.registered@@email.com",
 #'          idType="ENTREZ_GENE_ID", listName="My_gene_list-1")
 #'      david = DAVIDWebService$new(email = "your.registered@@email.com")
-#'          fnAnot = getFnAnot_genome(entrezList, david = david)
+#'      fnAnot = getFnAnot_genome(entrezList, david = david)
 #'   }
 getFnAnot_genome <- function(geneList, david = NULL, email = NULL, idType = "REFSEQ_MRNA", listName = "auto_list") {
     #require('RDAVIDWebService')
@@ -222,7 +225,8 @@ subOntology <- function(set, ont) {
 #' @param ontology If a specific ontology (MF, BP, CC) is wanted rather than all terms, supply it here as a string
 #' @examples
 #' \dontrun{
-#'      ## This is not run because it requires the entire pathway to be complete beforehand, which takes too long.
+#'      # This is not run because it requires the entire pathway
+#'      # to be complete beforehand, which takes too long.
 #'      plotPairwise(fnAnot.list1, fnAnot.list2, cutoff=0.05)
 #' }
 plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=FALSE, model='lm', ontology=NULL) {
@@ -335,7 +339,8 @@ extractGOFromAnnotation <- function(fnAnot) {
 #'      \url{http://david.abcc.ncifcrf.gov/}
 #' @examples
 #' \dontrun{
-#'      ## The entire pathway must be run for this example to work, which takes too long for compilation.
+#'      # The entire pathway must be run for this example to work,
+#'      # which takes too long for compilation.
 #'      plotTwoGODags(fnAnot.geneList1, fnAnot.geneList2)
 #' }
 plotTwoGODags <- function (anot1, anot2, add.counts = TRUE, max.nchar = 60, node.colors = c(sig1 = "red",

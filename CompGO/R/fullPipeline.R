@@ -296,7 +296,7 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
     print(corr)
     p = ggplot(comp, aes(-log10(setA_val), -log10(setB_val)))
 #p + geom_point() + geom_smooth(method=model) + geom_text(data = NULL, x = 5, y=9, label=paste("cor:", corr, sep=' '))
-    p = p + geom_point(aes(colour=jaccard), size=2) + theme(axis.text.x=element_text(size=6), axis.text.y=element_text(size=6),
+    p = p + geom_point(aes_string(colour='jaccard'), size=2) + theme(axis.text.x=element_text(size=6), axis.text.y=element_text(size=6),
         axis.line=element_line(), axis.title=element_text(size=6, face="bold"), legend.text=element_text(size=6), legend.title=element_text(size=6))
     p = p + scale_colour_gradient2(expression(over(abs(paste("A", intersect(), "B")), abs(paste("A", union(), "B")))),
         low="red", mid="red", high="blue", limits=c(0, 1))

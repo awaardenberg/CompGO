@@ -266,6 +266,15 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
     setB_comp = cbind(read.table(text=names(setB_val)), setB_val)
     comp = merge(setA_comp, setB_comp, all=TRUE)
 
+    go_setA = names(setA_val)
+    go_setB = names(setB_val)
+
+    goTerms_U = union(go_setA, go_setB)
+    goTerms_N = intersect(go_setA, go_setB)
+
+    totJaccard= length(goTerms_N)/length(goTerms_U)
+    totJaccard= format(round(totJaccard, 4), nsmall=4)
+
     for(i in 1:nrow(comp)) {
         geneA = subset(setA, Term == comp[i,]$V1)$Genes
         geneB = subset(setB, Term == comp[i,]$V1)$Genes
@@ -304,7 +313,7 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
         axis.line=element_line(), axis.title=element_text(size=6, face="bold"), legend.text=element_text(size=6), legend.title=element_text(size=6))
     p = p + scale_colour_gradient2(expression(over(abs(paste("A", intersect(), "B")), abs(paste("A", union(), "B")))),
         low="red", mid="red", high="blue", limits=c(0, 1))
-    p = p + annotate("text", label = paste("R=", corr), x = Inf, hjust = 1, y = Inf, vjust = 5, size = 5, colour = "black")
+    p = p + annotate("text", label = paste("R=", corr, "Jc=", totJaccard), x = Inf, hjust = 1, y = Inf, vjust = 5, size = 5, colour = "black")
     p = p + geom_smooth(method=model)
     plot(p)
     return(p)

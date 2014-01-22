@@ -10,8 +10,6 @@ buildGoList <- function(chart, annotatedList, threshold = 20) {
         genes = genes[[1]]
         geneList = vector(mode = "list", length = length(genes))
         for(j in 1:length(genes)) {
-            if (j == 1 | j %% 10 == 0)
-                message(paste(j,"done of", length(genes), "genes",'\r', sep=' '))
             anotRow = annotatedList[annotatedList$name == genes[j],]
             listElement = data.frame(
                 gene = anotRow$name,

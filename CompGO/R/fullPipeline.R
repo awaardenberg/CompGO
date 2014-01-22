@@ -237,6 +237,117 @@ compareClusters <- function(listA, listB, david = NULL, email = NULL, listName=N
 }
 '
 
+#' @title Plot ECDFs of two functional annotation charts and include K-S statistics of distribution similarity
+#' @description Uses a two-sample Kolmogorov-Smirnov test on the supplied fnAnot charts to test whether the underlying distributions of their P-values differ. Can be used as a metric for similarity between test sets.
+#' @param setA A DAVIDFunctionalAnnotationChart to compare
+#' @param setB A DAVIDFunctionalAnnotationChart to compare
+#' @param useRawPvals Use raw P-values instead of Benjamini-corrected
+#' @export
+#' @examples
+#' # don't run, it just produces a plot which is not instructive in CLI examples
+#' \dontrun{
+#' p = ksTest(fnAnot.1, fnAnot.2)
+#' plot(p)
+#' }
+ksTest <- function(setA, setB, useRawPvals = FALSE) {
+    pvals = extractPvalTable(setA, setB, useRawPvals)
+    stats <- ks.test(x[,2], x[,3])
+    D.stat <- round(stats$statistic[[1]], 3)
+    p.stat <- round(stats$p.value, 3)
+    cor.val <- round(cor(-log(x[,2],10), -log(x[,3], 10), method="spearman", use="na.or.complete"),3)
+#determine the cumulative distributions:
+    ecdf.a <- ecdf(x[,2])
+    ecdf.b <- ecdf(x[,3])
+#set plotting parameters:
+    par(mfrow=c(1,2))
+    p = plot(ecdf.a, verticals=TRUE, do.points=FALSE,
+        col="red", main="", xlab="pval", ylab="Cumulative Probability")
+    p = p + plot(ecdf.b, verticals=TRUE, do.points=FALSE, col="green", add=TRUE)
+    p = p + legend("bottomright", c(paste("D=", D.stat, sep=""), paste("p=", p.stat, sep="")), pch=1,
+        title="K-S stats:", inset = .02)
+    return(p)
+}
+
+#' @title Plot two functional annotation charts using a sliding Jaccard coefficient
+#' @description This function compares two functional annotation charts using a sliding Jaccard coefficient - a ranked list of P-values is produced, and a sliding window is used to find out the Jaccard coefficient of the two charts at different cutoffs of the top n terms. This is useful to determine where the majority of overlapping terms is located, and can also be used to compare Jaccard profiles between sets if sets C and D are supplied.
+#' @param setA A DAVIDFunctionalAnnotationChart to compare
+#' @param setB A DAVIDFunctionalAnnotationChart to compare
+#' @param increment The increment to use for each sliding window
+#' @param useRawPvals Use raw P-values instead of Benjamini-corrected
+#' @param setC A DAVIDFunctionalAnnotationChart to compare, optional
+#' @param setD A DAVIDFunctionalAnnotationChart to compare, optional
+#' @export
+#' @examples
+#' \dontrun {
+#' setA = getFnAnot_genome(entrezList, email = "email")
+#' setB = getFnAnot_genome(entrezList2, email = "email")
+#' slidingJaccard(setA, setB, 50, FALSE)
+#' }
+slidingJaccard <- function(setA, setB, increment, useRawPvals = FALSE, setC = NULL, setD = NULL) {
+    pvals = extractPvalTable(setA, setB, useRawPvals)
+    result = doJACCit(pvals, increment)
+    p = plot(result1, type="l", col="red", main="", xlab="top n terms",
+        ylab="Jaccard coefficient", ylim=c(0, 1))
+    if (!is.null(setC) & !is.null(setD)) {
+        pvals = extractPvalTable(setC, setD, useRawPvals)
+        result = doJACCit(pvals, increment)
+        p = p+lines(result, type="l", col="green")
+    }
+    return(p)
+}
+
+#ITERATE JACCARD FUNCTION:
+doJACCit <- function(x, it){#it = increment
+    x.1 <- cbind(x[1], x[2])
+    x.2 <- cbind(x[1], x[3])
+#rank the two lists by-value:
+    x.1 <- x.1[order(x.1[,2]),]
+    x.2 <- x.2[order(x.2[,2]),]
+#iterate between the top x amount:
+#create matrix:
+    matrix.jacc <- matrix(0, floor(min(nrow(x.1), nrow(x.2))/it), 2)
+#maybe a smoothing function would be better!!?? - i.e. to remove peaks/troughs...
+    for (i in 1:floor(min(nrow(x.1), nrow(x.2))/it)){
+#print(i*10)
+        matrix.jacc[i,1] <- i*it
+        terms.1 <- head(x.1[1], i*it)
+        terms.2 <- head(x.2[1], i*it)
+        union.terms <- i*it
+        intersect.terms <- intersect(terms.1[,1], terms.2[,1])
+        JC <- length(intersect.terms)/union.terms
+        matrix.jacc[i, 2] <- JC
+    }
+    return(matrix.jacc)#return the matrix for plotting
+}#end of function
+
+extractPvalTable <- function(setA, setB, useRawPvals) {
+    if(class(setA) == "DAVIDFunctionalAnnotationChart") {
+        setA = extractGOFromAnnotation(setA)
+        if (useRawPvals)
+            setA_val = setA$PValue
+        else setA_val = setA$Benjamini
+        names(setA_val) = setA$Term
+    } else {
+        stop("SetA needs to be of type DAVIDFunctionalAnnotationChart")
+    }
+
+    if(class(setB) == "DAVIDFunctionalAnnotationChart") {
+        setB = extractGOFromAnnotation(setB)
+        if (useRawPvals)
+            setB_val = setB$PValue
+        else setB_val = setB$Benjamini
+        names(setB_val) = setB$Term
+    } else {
+        stop("SetB needs to be of type DAVIDFunctionalAnnotationChart")
+    }
+
+    setA_comp = cbind(read.table(text=names(setA_val)), setA_val)
+    setB_comp = cbind(read.table(text=names(setB_val)), setB_val)
+    comp = merge(setA_comp, setB_comp, all=TRUE)
+
+    return(comp)
+}
+
 #' @title Generates a scatterplot of two sets of GO terms
 #' @description Generates a -log10 scatterplot of two sets of GO terms by p-value or corrected p-value with linear fit and correlation
 #' @export
@@ -265,7 +376,7 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
         }
     }
     #require('RDAVIDWebService')
-    if (class(setA)== 'DAVIDFunctionalAnnotationChart') {
+    if (all(c("Category", "X.", "PValue", "Benjamini") %in% names(setA))) {
         setA = extractGOFromAnnotation(setA)
         if (useRawPvals) {
             setA_val = setA$PValue
@@ -276,7 +387,7 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
     } else {
         stop("SetA needs to be of type DAVIDFunctionalAnnotationChart")
     }
-    if (class(setB) == 'DAVIDFunctionalAnnotationChart') {
+    if (all(c("Category", "X.", "PValue", "Benjamini") %in% names(setB))) {
         setB = extractGOFromAnnotation(setB)
         if (useRawPvals) {
             setB_val = setB$PValue
@@ -301,9 +412,14 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
     totJaccard= length(goTerms_N)/length(goTerms_U)
     totJaccard= format(round(totJaccard, 4), nsmall=4)
 
+    annotatedListA = read.table("001_pipeline_geneSets/nkx5.txt")
+    annotatedListB = read.table("001_pipeline_geneSets/nkx6.txt")
+
+    goList = list()
     for(i in 1:nrow(comp)) {
         geneA = subset(setA, Term == comp[i,]$V1)$Genes
         geneB = subset(setB, Term == comp[i,]$V1)$Genes
+        goTerm= comp[i,]$V1
         geneA = strsplit(geneA, ', ')
         geneB = strsplit(geneB, ', ')
         if(length(geneA) == 0 | length(geneB) == 0) {
@@ -318,7 +434,32 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
         n = intersect(geneA, geneB)
         u = union(geneA, geneB)
         comp[i, "jaccard"] = length(n)/length(u)
+        B = n
+        A = setdiff(geneA, B)
+        C = setdiff(geneB, B)
+
+        Agenes = vector(mode = "list", length = length(A))
+        for(j in 1:length(A)) {
+            anotRow = annotatedListA[annotatedListA$name == A[j],]
+            listElement = data.frame(
+                chrom   = anotRow$chrom,
+                start   = anotRow$bedStart,
+                end     = anotRow$bedEnd)
+            Agenes[j] = listElement
+        }
+        Cgenes = vector(mode = "list", length = length(C))
+        for(j in 1:length(C)) {
+            anotRow = annotatedListB[annotatedListB$name == C[j],]
+            listElement = data.frame(
+                chrom   = anotRow$chrom,
+                start   = anotRow$bedStart,
+                end     = anotRow$bedEnd)
+            Cgenes[j] = listElement
+        }
+# TODO: No B genes, which set to take their .bed coordinates from?
+        goList[[goTerm]] = list("A" = Agenes, "B" = list(), "C" = Cgenes)
     }
+    return(goList)
 
     if(!is.null(cutoff)) {
         comp = subset(comp, (setA_val < cutoff | setB_val < cutoff))

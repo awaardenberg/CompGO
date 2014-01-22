@@ -77,7 +77,7 @@ annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL, threshol
     closestGenes = data.frame()
     start = proc.time()
     time = vector()
-    message("Starting annotation, this process can take time (5 minutes on a .bed file with 1500 regions).")
+    message("Starting annotation, this process can take time.")
     for (j in 1:nrow(bed)) {
         line = bed[j,]
         if (j == 1 | j %% 10 == 0) {
@@ -124,6 +124,8 @@ annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL, threshol
         minIndex = which.min(abs(distances))
         closest = db.sub[minIndex,]
         closest$distance = distances[minIndex]
+        closest$bedStart = line$start
+        closest$bedEnd   = line$end
         closestGenes = rbind(closest, closestGenes)
     }
     closestGenes = subset(closestGenes, abs(closestGenes$distance) < threshold)
@@ -145,9 +147,9 @@ annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL, threshol
 #'   plotDistanceDistribution(geneList$distance, bw=300)
 plotDistanceDistribution <- function(distanceList, bw = NULL, to = 10000, from = -10000, probeOverlay = NULL) {
 # We got the best results with bw=300
-    plot(density(distanceList, bw = bw, from = from, to = to, na.rm=TRUE))
+    p = plot(density(distanceList, bw = bw, from = from, to = to, na.rm=TRUE))
     if(!is.null(probeOverlay))
-        lines(density(probeOverlay, from = from, to = to))
+        p = p + lines(density(probeOverlay, from = from, to = to))
 }
 #' @title Reads in a .bed file as a data.frame
 #' @description Reads in a .bed file as a data.frame, replaces chr* with * if subChr is true (in case needed for biomaRt or something)
@@ -210,6 +212,30 @@ subOntology <- function(set, ont) {
     set = DAVIDFunctionalAnnotationChart(set)
     return(set)
 }
+
+"
+#' @title Compares gene lists using DAVID's functional clustering algorithm
+#' @description Uses DAVID gene clustering (based on a Kappa statistic) to group genes and terms into strongly enriched groups then compares these groups between two initial gene sets.
+#' @export
+"
+'
+compareClusters <- function(listA, listB, david = NULL, email = NULL, listName=NULL) {
+    if(is.null(david)) {
+        david = DAVIDWebService$new(email=email)
+    }
+    if(!RDAVIDWebService::is.connected(david))
+        connect(david)
+    message("As this interfaces with DAVID online, this can take some time. Please be patient.")
+    message("Uploading setA")
+    addList(david, listA, idType=idType, listType="Gene", listName = ifelse(is.null(listName), "listA", paste(listName, "A", sep="")))
+    message("Finished uploading setA, generating report...")
+    clusterA = getClusterReport(david, type="Term")
+    message("Uploading setB")
+    addList(david, listB, idType=idType, listType="Gene", listName = ifelse(is.null(listName), "listB", paste(listName, "B", sep="")))
+    message("Finished uploading setB, generating report...")
+    clusterB = getClusterReport(david, type="Term")
+}
+'
 
 #' @title Generates a scatterplot of two sets of GO terms
 #' @description Generates a -log10 scatterplot of two sets of GO terms by p-value or corrected p-value with linear fit and correlation

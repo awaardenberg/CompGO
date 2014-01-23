@@ -412,9 +412,6 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
     totJaccard= length(goTerms_N)/length(goTerms_U)
     totJaccard= format(round(totJaccard, 4), nsmall=4)
 
-    annotatedListA = read.table("001_pipeline_geneSets/nkx5.txt")
-    annotatedListB = read.table("001_pipeline_geneSets/nkx6.txt")
-
     goList = list()
     for(i in 1:nrow(comp)) {
         geneA = subset(setA, Term == comp[i,]$V1)$Genes
@@ -434,32 +431,7 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
         n = intersect(geneA, geneB)
         u = union(geneA, geneB)
         comp[i, "jaccard"] = length(n)/length(u)
-        B = n
-        A = setdiff(geneA, B)
-        C = setdiff(geneB, B)
-
-        Agenes = vector(mode = "list", length = length(A))
-        for(j in 1:length(A)) {
-            anotRow = annotatedListA[annotatedListA$name == A[j],]
-            listElement = data.frame(
-                chrom   = anotRow$chrom,
-                start   = anotRow$bedStart,
-                end     = anotRow$bedEnd)
-            Agenes[j] = listElement
-        }
-        Cgenes = vector(mode = "list", length = length(C))
-        for(j in 1:length(C)) {
-            anotRow = annotatedListB[annotatedListB$name == C[j],]
-            listElement = data.frame(
-                chrom   = anotRow$chrom,
-                start   = anotRow$bedStart,
-                end     = anotRow$bedEnd)
-            Cgenes[j] = listElement
-        }
-# TODO: No B genes, which set to take their .bed coordinates from?
-        goList[[goTerm]] = list("A" = Agenes, "B" = list(), "C" = Cgenes)
     }
-    return(goList)
 
     if(!is.null(cutoff)) {
         comp = subset(comp, (setA_val < cutoff | setB_val < cutoff))

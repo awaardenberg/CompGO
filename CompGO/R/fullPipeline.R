@@ -250,7 +250,7 @@ compareClusters <- function(listA, listB, david = NULL, email = NULL, listName=N
 #' plot(p)
 #' }
 ksTest <- function(setA, setB, useRawPvals = FALSE) {
-    pvals = extractPvalTable(setA, setB, useRawPvals)
+    x = extractPvalTable(setA, setB, useRawPvals)
     stats <- ks.test(x[,2], x[,3])
     D.stat <- round(stats$statistic[[1]], 3)
     p.stat <- round(stats$p.value, 3)
@@ -283,10 +283,10 @@ ksTest <- function(setA, setB, useRawPvals = FALSE) {
 #' setB = getFnAnot_genome(entrezList2, email = "email")
 #' slidingJaccard(setA, setB, 50, FALSE)
 #' }
-slidingJaccard <- function(setA, setB, increment, useRawPvals = FALSE, setC = NULL, setD = NULL) {
+slidingJaccard <- function(setA, setB, increment = 50, useRawPvals = FALSE, setC = NULL, setD = NULL) {
     pvals = extractPvalTable(setA, setB, useRawPvals)
     result = doJACCit(pvals, increment)
-    p = plot(result1, type="l", col="red", main="", xlab="top n terms",
+    p = plot(result, type="l", col="red", main="", xlab="top n terms",
         ylab="Jaccard coefficient", ylim=c(0, 1))
     if (!is.null(setC) & !is.null(setD)) {
         pvals = extractPvalTable(setC, setD, useRawPvals)
@@ -321,7 +321,7 @@ doJACCit <- function(x, it){#it = increment
 }#end of function
 
 extractPvalTable <- function(setA, setB, useRawPvals) {
-    if(class(setA) == "DAVIDFunctionalAnnotationChart") {
+    if(all(c("Category", "X.", "PValue", "Benjamini") %in% names(setA))) {
         setA = extractGOFromAnnotation(setA)
         if (useRawPvals)
             setA_val = setA$PValue
@@ -331,7 +331,7 @@ extractPvalTable <- function(setA, setB, useRawPvals) {
         stop("SetA needs to be of type DAVIDFunctionalAnnotationChart")
     }
 
-    if(class(setB) == "DAVIDFunctionalAnnotationChart") {
+    if(all(c("Category", "X.", "PValue", "Benjamini") %in% names(setB))) {
         setB = extractGOFromAnnotation(setB)
         if (useRawPvals)
             setB_val = setB$PValue

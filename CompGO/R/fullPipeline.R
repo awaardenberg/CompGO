@@ -278,7 +278,7 @@ ksTest <- function(setA, setB, useRawPvals = FALSE) {
 #' @param setD A DAVIDFunctionalAnnotationChart to compare, optional
 #' @export
 #' @examples
-#' \dontrun {
+#' \dontrun{
 #' setA = getFnAnot_genome(entrezList, email = "email")
 #' setB = getFnAnot_genome(entrezList2, email = "email")
 #' slidingJaccard(setA, setB, 50, FALSE)

@@ -78,10 +78,12 @@ annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL, threshol
     start = proc.time()
     time = vector()
     message("Starting annotation, this process can take time.")
+    progress = txtProgressBar(min = 0, max = nrow(bed), style = 3)
     for (j in 1:nrow(bed)) {
         line = bed[j,]
         if (j == 1 | j %% 10 == 0) {
-            message(paste("\r",j,"done of", nrow(bed), "elements",'\r', sep=' '))
+            #message(paste("\r",j,"done of", nrow(bed), "elements",'\r', sep=' '))
+            setTxtProgressBar(progress, j)
             currTime = proc.time() - start
             start = proc.time()
             time = append(time, currTime[['elapsed']])
@@ -182,6 +184,7 @@ read.bed <- function(path, subChr = FALSE) {
 #'      their WebService API. This can be accomplished online, then the registered email supplied here.
 #' @param idType The type of gene IDs being uploaded (MGI, Entrez,...)
 #' @param listName The name to give the list when it's uploaded to the WebService
+#' @param rawValues If true, no thresholding is performed on either P-values or GO term count by DAVID
 #' @return Returns a DAVIDFunctionalAnnotationChart after generating it by comparing the supplied gene list to the full
 #'      genome as a background
 #' @examples
@@ -193,7 +196,7 @@ read.bed <- function(path, subChr = FALSE) {
 #'      david = DAVIDWebService$new(email = "your.registered@@email.com")
 #'      fnAnot = getFnAnot_genome(entrezList, david = david)
 #'   }
-getFnAnot_genome <- function(geneList, david = NULL, email = NULL, idType = "REFSEQ_MRNA", listName = "auto_list") {
+getFnAnot_genome <- function(geneList, david = NULL, email = NULL, idType = "REFSEQ_MRNA", listName = "auto_list", rawValues = F) {
     #require('RDAVIDWebService')
     if (is.null(david) && !is.null(email)) {
         david <- DAVIDWebService$new(email = email)
@@ -205,7 +208,10 @@ getFnAnot_genome <- function(geneList, david = NULL, email = NULL, idType = "REF
     setAnnotationCategories(david, c("GOTERM_BP_ALL", "GOTERM_MF_ALL", "GOTERM_CC_ALL"))
 # to ensure genome-wide comparison
     setCurrentBackgroundPosition(david, 1)
-    fnAnot <- getFunctionalAnnotationChart(david, threshold=1)
+    if(rawValues)
+        fnAnot <- getFunctionalAnnotationChart(david, threshold=1, count=1L)
+    else
+        fnAnot <- getFunctionalAnnotationChart(david)
     return(fnAnot)
 }
 

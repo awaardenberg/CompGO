@@ -81,7 +81,7 @@ annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL, threshol
     for (j in 1:nrow(bed)) {
         line = bed[j,]
         if (j == 1 | j %% 10 == 0) {
-            message(paste(j,"done of", nrow(bed), "elements",'\r', sep=' '))
+            message(paste("\r",j,"done of", nrow(bed), "elements",'\r', sep=' '))
             currTime = proc.time() - start
             start = proc.time()
             time = append(time, currTime[['elapsed']])
@@ -89,15 +89,15 @@ annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL, threshol
         }
         if(j == floor(nrow(bed)/2)) {
             message("halfway!")
-            message(paste("approx.", floor(avg*((nrow(bed)-j)/10)/60), "minutes remaining", sep=' '))
+            message(paste("approx.", round(avg*((nrow(bed)-j)/10)/60, digits = 3), "minutes remaining", sep=' '))
         }
         if(j == floor(nrow(bed)/4)) {
             message("quarter done!")
-            message(paste("approx.", floor(avg*((nrow(bed)-j)/10)/60), "minutes remaining", sep=' '))
+            message(paste("approx.", round(avg*((nrow(bed)-j)/10)/60, digits = 3), "minutes remaining", sep=' '))
         }
         if(j == floor(3*nrow(bed)/4)) {
             message("3/4 done!")
-            message(paste("approx.", floor(avg*((nrow(bed)-j)/10)/60), "minutes remaining", sep=' '))
+            message(paste("approx.", round(avg*((nrow(bed)-j)/10)/60, digits = 3), "minutes remaining", sep=' '))
         }
 # to hopefully speed up, first subset by range, then by chr:
         binNumber = floor(line[['start']] / 1000000)
@@ -105,6 +105,8 @@ annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL, threshol
         db.sub = rbind(db.sub, binList[,binNumber + 1])
         db.sub = rbind(db.sub, binList[,binNumber - 1])
         db.sub = subset(db.sub, as.character(db.sub$chrom) == as.character(line[['chr']]))
+        if(nrow(db.sub) == 0)
+            next
         peakLen = line[['end']] - line[['start']]
         peakMid = (line[['start']] + line[['end']])/2
         shortestLen = 999999999999

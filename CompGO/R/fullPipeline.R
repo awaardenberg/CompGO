@@ -102,8 +102,10 @@ annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL, threshol
 # to hopefully speed up, first subset by range, then by chr:
         binNumber = floor(line[['start']] / 1000000)
         db.sub = as.data.frame(binList[,binNumber])
-        db.sub = rbind(db.sub, binList[,binNumber + 1])
-        db.sub = rbind(db.sub, binList[,binNumber - 1])
+        if(binNumber < ncol(binList))
+            db.sub = rbind(db.sub, binList[,binNumber + 1])
+        if(binNumber > 1)
+            db.sub = rbind(db.sub, binList[,binNumber - 1])
         db.sub = subset(db.sub, as.character(db.sub$chrom) == as.character(line[['chr']]))
         if(nrow(db.sub) == 0)
             next

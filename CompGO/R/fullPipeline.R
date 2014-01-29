@@ -82,7 +82,6 @@ annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL, threshol
     for (j in 1:nrow(bed)) {
         line = bed[j,]
         if (j == 1 | j %% 10 == 0) {
-            #message(paste("\r",j,"done of", nrow(bed), "elements",'\r', sep=' '))
             setTxtProgressBar(progress, j)
             currTime = proc.time() - start
             start = proc.time()
@@ -90,15 +89,15 @@ annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL, threshol
             avg = mean(time, na.rm=TRUE)
         }
         if(j == floor(nrow(bed)/2)) {
-            message("halfway!")
+            message()
             message(paste("approx.", round(avg*((nrow(bed)-j)/10)/60, digits = 3), "minutes remaining", sep=' '))
         }
         if(j == floor(nrow(bed)/4)) {
-            message("quarter done!")
+            message()
             message(paste("approx.", round(avg*((nrow(bed)-j)/10)/60, digits = 3), "minutes remaining", sep=' '))
         }
         if(j == floor(3*nrow(bed)/4)) {
-            message("3/4 done!")
+            message()
             message(paste("approx.", round(avg*((nrow(bed)-j)/10)/60, digits = 3), "minutes remaining", sep=' '))
         }
 # to hopefully speed up, first subset by range, then by chr:

@@ -3,7 +3,7 @@
 \title{Get the functional annotation table of a gene list using DAVID}
 \usage{
 getFnAnot_genome(geneList, david = NULL, email = NULL,
-  idType = "REFSEQ_MRNA", listName = "auto_list")
+  idType = "REFSEQ_MRNA", listName = "auto_list", rawValues = F)
 }
 \arguments{
   \item{geneList}{A list of genes to upload and
@@ -24,6 +24,9 @@ getFnAnot_genome(geneList, david = NULL, email = NULL,
 
   \item{listName}{The name to give the list when it's
   uploaded to the WebService}
+
+  \item{rawValues}{If true, no thresholding is performed on
+  either P-values or GO term count by DAVID}
 }
 \value{
 Returns a DAVIDFunctionalAnnotationChart after generating

@@ -246,6 +246,85 @@ compareClusters <- function(listA, listB, david = NULL, email = NULL, listName=N
 }
 '
 
+###########################################
+###########################################
+#   Ashley Waardenberg - 28-01-2014
+#   Z-score transformation of Odds Ratios
+#   Odds ratio, plot, calculate z-score
+#   of OR comparisons...
+###########################################
+
+#' @title Z-score transformation of Odds Ratios in files in a directory
+#' @description Given a directory of functional annotation charts, this function iterates over them and
+#' generates Odds Ratio, St. Error and Z scores.
+#' @param inputDir The directory to search for functional annotation charts
+#' @param plot Whether to plot a dendrogram for visual comparison or not
+#' @return Returns a data.frame of z scores, ORs and SEs
+#' @export
+#' @examples
+#' \dontrun{
+#'    #not run as dir required
+#'    zTransformDirectory('../')
+#' }
+zTransformDirectory <- function(inputDir, plot=T) {
+#inputDir <- "../../Volumes/helkit/sam/010_batch_pipeline/001_QA_bed/"#DamID_2013 files
+#outputDir <- "/Users/ashwaa/Documents/Projects/DamID_2013/014_DAVID/From_SAM/"
+    file.list <- list.files(inputDir, pattern = "fnAnot.txt", full.names = TRUE)
+#initialise the table:
+    z.merge <- matrix()
+#loop through the files of interest and put into a single list:
+    for(i in 1:length(file.list)){
+        file.name <- strsplit(strsplit(file.list[i], paste("//", sep=""))[[1]][2], ".bed-fnAnot.txt")[[1]][1]
+#read table in
+        table <- read.table(file.list[i])
+        if(i==1){
+            z.merge <- doZtrans.single(table, file.name)
+        }
+        if(i>1){
+            z.merge.add <- doZtrans.single(table, file.name)
+            z.merge <- merge(z.merge, z.merge.add, by="Term", all.x=TRUE, all.y = TRUE)
+        }
+    }
+#replace NA's with zeros (instances of no hits):
+    z.merge[is.na(z.merge)] <- 0
+
+##################################
+#hierarchical clustering ANALYSIS:
+##################################
+    if(plot) {
+        d <- cor(abs(z.merge[2:ncol(z.merge)]))
+        dist.cor <- hclust(dist(1-d), method="complete")
+        plot(dist.cor)
+    }
+    return(z.merge)
+}
+
+##############################
+###FUNCTIONS:::
+##############################
+
+#' @title Perform Z transform to single fnAnot table
+#' @description Decomposes each GO term in an fnAnot table to its Z-score these tables can be merged to produce a dendrogram or similar
+#' @param x The fnAnot chart to apply the transformation to
+#' @param name The name to give the Z-score column
+#' @return A data.frame of GO terms and Z-scores
+#' @export
+#' @examples
+#' \dontrun{
+#'     fnAnot.zscore = doZtrans.single(fnAnot)
+#' }
+doZtrans.single <- function(x, name = "Z-score"){
+#Z-stats
+    x <- cbind(x, "OR"= (x[,3]/x[,7])/(x[,8]/x[,9]))
+    x <- cbind(x, "SE"=sqrt(1/x[,3] + 1/x[,7] + 1/x[,8] +1/x[,9]))
+    x <- cbind(x, "Z"= log(x$OR)/x$SE)
+#replace NAs with appropriate values:
+    x$Z[is.na(x$Z)] <- 0
+    x <- cbind(x[2], "Z"=x$Z)
+    colnames(x)<-c("Term", name)
+    return(x)
+}
+
 #' @title Plot ECDFs of two functional annotation charts and include K-S statistics of distribution similarity
 #' @description Uses a two-sample Kolmogorov-Smirnov test on the supplied fnAnot charts to test whether the underlying distributions of their P-values differ. Can be used as a metric for similarity between test sets.
 #' @param setA A DAVIDFunctionalAnnotationChart to compare
@@ -412,6 +491,10 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
     setB_comp = cbind(read.table(text=names(setB_val)), setB_val)
     comp = merge(setA_comp, setB_comp, all=TRUE)
 
+    if(!is.null(cutoff)) {
+        comp = subset(comp, (setA_val < cutoff | setB_val < cutoff))
+    }
+
     go_setA = names(setA_val)
     go_setB = names(setB_val)
 
@@ -440,10 +523,6 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
         n = intersect(geneA, geneB)
         u = union(geneA, geneB)
         comp[i, "jaccard"] = length(n)/length(u)
-    }
-
-    if(!is.null(cutoff)) {
-        comp = subset(comp, (setA_val < cutoff | setB_val < cutoff))
     }
 
     if(plotNA) {

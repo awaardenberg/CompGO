@@ -195,7 +195,7 @@ read.bed <- function(path, subChr = FALSE) {
 #'      david = DAVIDWebService$new(email = "your.registered@@email.com")
 #'      fnAnot = getFnAnot_genome(entrezList, david = david)
 #'   }
-getFnAnot_genome <- function(geneList, david = NULL, email = NULL, idType = "REFSEQ_MRNA", listName = "auto_list", rawValues = F) {
+getFnAnot_genome <- function(geneList, david = NULL, email = NULL, idType = "REFSEQ_MRNA", listName = "auto_list", rawValues = T) {
     #require('RDAVIDWebService')
     if (is.null(david) && !is.null(email)) {
         david <- DAVIDWebService$new(email = email)
@@ -274,15 +274,20 @@ zTransformDirectory <- function(inputDir, plot=T) {
     z.merge <- matrix()
 #loop through the files of interest and put into a single list:
     for(i in 1:length(file.list)){
-        file.name <- strsplit(strsplit(file.list[i], paste("//", sep=""))[[1]][2], ".bed-fnAnot.txt")[[1]][1]
+        file.name = unlist(strsplit(file.list[i], "/"))
+        file.name = file.name[length(file.name)]
+        file.name = sub(".bed-fnAnot.txt", "", file.name)
+        #file.name <- strsplit(strsplit(file.list[i], paste("//", sep=""))[[1]][2], ".bed-fnAnot.txt")[[1]][1]
 #read table in
         table <- read.table(file.list[i])
         if(i==1){
             z.merge <- doZtrans.single(table, file.name)
+            names(z.merge)[ncol(z.merge)] = file.name
         }
         if(i>1){
             z.merge.add <- doZtrans.single(table, file.name)
             z.merge <- merge(z.merge, z.merge.add, by="Term", all.x=TRUE, all.y = TRUE)
+            names(z.merge)[ncol(z.merge)] = file.name
         }
     }
 #replace NA's with zeros (instances of no hits):
@@ -313,7 +318,7 @@ zTransformDirectory <- function(inputDir, plot=T) {
 #' \dontrun{
 #'     fnAnot.zscore = doZtrans.single(fnAnot)
 #' }
-doZtrans.single <- function(x, name = "Z-score"){
+doZtrans.single <- function(x, name){
 #Z-stats
     x <- cbind(x, "OR"= (x[,3]/x[,7])/(x[,8]/x[,9]))
     x <- cbind(x, "SE"=sqrt(1/x[,3] + 1/x[,7] + 1/x[,8] +1/x[,9]))
@@ -347,7 +352,6 @@ ksTest <- function(setA, setB, useRawPvals = FALSE) {
     ecdf.a <- ecdf(x[,2])
     ecdf.b <- ecdf(x[,3])
 #set plotting parameters:
-    par(mfrow=c(1,2))
     p = plot(ecdf.a, verticals=TRUE, do.points=FALSE,
         col="red", main="", xlab="pval", ylab="Cumulative Probability")
     p = p + plot(ecdf.b, verticals=TRUE, do.points=FALSE, col="green", add=TRUE)
@@ -542,7 +546,7 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
         low="red", mid="red", high="blue", limits=c(0, 1))
     p = p + annotate("text", label = paste("R=", corr, "Jc=", totJaccard), x = Inf, hjust = 1, y = Inf, vjust = 5, size = 5, colour = "black")
     p = p + geom_smooth(method=model)
-    plot(p)
+    #plot(p)
     return(p)
 }
 
@@ -676,3 +680,4 @@ plotTwoGODags <- function (anot1, anot2, add.counts = TRUE, max.nchar = 60, node
 # plot the tree!
     plot(join(g1,g2), ..., nodeAttrs = nattr)
 }
+    

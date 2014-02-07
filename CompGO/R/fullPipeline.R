@@ -259,6 +259,7 @@ compareClusters <- function(listA, listB, david = NULL, email = NULL, listName=N
 #' generates Odds Ratio, St. Error and Z scores.
 #' @param inputDir The directory to search for functional annotation charts
 #' @param plot Whether to plot a dendrogram for visual comparison or not
+#' @param cutoff Reduce the computation to the top n GO terms ranked by variance
 #' @return Returns a data.frame of z scores, ORs and SEs
 #' @export
 #' @examples
@@ -266,9 +267,7 @@ compareClusters <- function(listA, listB, david = NULL, email = NULL, listName=N
 #'    #not run as dir required
 #'    zTransformDirectory('../')
 #' }
-zTransformDirectory <- function(inputDir, plot=T) {
-#inputDir <- "../../Volumes/helkit/sam/010_batch_pipeline/001_QA_bed/"#DamID_2013 files
-#outputDir <- "/Users/ashwaa/Documents/Projects/DamID_2013/014_DAVID/From_SAM/"
+zTransformDirectory <- function(inputDir, plot=T, cutoff=NULL) {
     file.list <- list.files(inputDir, pattern = "fnAnot.txt", full.names = TRUE)
 #initialise the table:
     z.merge <- matrix()
@@ -276,8 +275,7 @@ zTransformDirectory <- function(inputDir, plot=T) {
     for(i in 1:length(file.list)){
         file.name = unlist(strsplit(file.list[i], "/"))
         file.name = file.name[length(file.name)]
-        file.name = sub(".bed-fnAnot.txt", "", file.name)
-        #file.name <- strsplit(strsplit(file.list[i], paste("//", sep=""))[[1]][2], ".bed-fnAnot.txt")[[1]][1]
+        file.name = sub("(.bed)*-fnAnot.txt", "", file.name)
 #read table in
         table <- read.table(file.list[i])
         if(i==1){
@@ -292,14 +290,18 @@ zTransformDirectory <- function(inputDir, plot=T) {
     }
 #replace NA's with zeros (instances of no hits):
     z.merge[is.na(z.merge)] <- 0
+    z.merge = cbind(z.merge, Var = apply(abs(z.merge[2:ncol(z.merge)]), 1, var))
+    z.merge = z.merge[order(-z.merge$Var), ]
+    if(!is.null(cutoff))
+        z.merge = z.merge[1:cutoff,]
 
 ##################################
 #hierarchical clustering ANALYSIS:
 ##################################
     if(plot) {
-        d <- cor(abs(z.merge[2:ncol(z.merge)]))
+        d <- cor(abs(z.merge[2:(ncol(z.merge)-1)]))
         dist.cor <- hclust(dist(1-d), method="complete")
-        plot(dist.cor)
+        plot(dist.cor, xlab="Complete linkage", sub = NA)
     }
     return(z.merge)
 }

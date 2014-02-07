@@ -3,7 +3,7 @@
 \title{Get the functional annotation table of a gene list using DAVID}
 \usage{
 getFnAnot_genome(geneList, david = NULL, email = NULL,
-  idType = "REFSEQ_MRNA", listName = "auto_list", rawValues = F)
+  idType = "REFSEQ_MRNA", listName = "auto_list", rawValues = T)
 }
 \arguments{
   \item{geneList}{A list of genes to upload and

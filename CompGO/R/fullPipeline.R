@@ -682,4 +682,3 @@ plotTwoGODags <- function (anot1, anot2, add.counts = TRUE, max.nchar = 60, node
 # plot the tree!
     plot(join(g1,g2), ..., nodeAttrs = nattr)
 }
-    

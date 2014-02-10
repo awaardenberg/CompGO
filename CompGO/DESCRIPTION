@@ -19,5 +19,6 @@ Depends:
 Imports:
     rtracklayer,
     Rgraphviz,
-    ggplot2
+    ggplot2,
+    VariantAnnotation
 biocViews: Annotation, Bioinformatics

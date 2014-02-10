@@ -9,7 +9,7 @@ export(slidingJaccard)
 export(ucscDbDump)
 export(zTransformDirectory)
 
-import(rtracklayer, Rgraphviz, ggplot2)
+import(rtracklayer, Rgraphviz, ggplot2, VariantAnnotation)
 importClassFrom(RDAVIDWebService, DAVIDWebService)
 importFrom("RDAVIDWebService", connect, addList, setAnnotationCategories, setCurrentBackgroundPosition, getFunctionalAnnotationChart)
 importFrom("RDAVIDWebService", DAVIDFunctionalAnnotationChart, DAVIDGODag)

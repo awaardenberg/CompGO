@@ -139,7 +139,7 @@ zTransformDirectory <- function(inputDir, plot=T, cutoff=NULL) {
 }
 
 ##############################
-###FUNCTIONS:::
+## FUNCTIONS:::
 ##############################
 
 #' @title Perform Z transform to single fnAnot table

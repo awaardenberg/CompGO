@@ -3,7 +3,7 @@
 \title{Get the functional annotation table of a gene list using DAVID}
 \usage{
 getFnAnot_genome(geneList, david = NULL, email = NULL,
-  idType = "REFSEQ_MRNA", listName = "auto_list", rawValues = T)
+  idType = "ENTREZ_GENE_ID", listName = "auto_list", rawValues = T)
 }
 \arguments{
   \item{geneList}{A list of genes to upload and
@@ -41,7 +41,7 @@ registration with DAVID first.
 \examples{
 ## not run because registration is required
   \dontrun{
-     fnAnot = getFnAnot_genome(entrezList,
+     fnAnot = getFnAnot_genome(exp1$GENEID,
          email = "your.registered@email.com",
          idType="ENTREZ_GENE_ID", listName="My_gene_list-1")
      david = DAVIDWebService$new(email = "your.registered@email.com")

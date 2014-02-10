@@ -275,11 +275,81 @@ extractPvalTable <- function(setA, setB, useRawPvals) {
     return(comp)
 }
 
+#' @title Performs z transform on two sets of GO terms and plots scatterplot of result
+#' @description Generates a scatterplot of z transformed GO terms and plots the result, which is normalised for set size, along with the Jaccard metric for each GO term and linear fit+correlation
+#' @export
+#' @param setA DAVIDFunctionalAnnotationChart object to compare
+#' @param setB DAVIDFunctionalAnnotationChart object to compare
+#' @param model The model to use when plotting linear fit, default 'lm'
+#' @examples
+#' \dontrun{
+#'      # This is not run because it requires the entire pathway
+#'      # to be complete beforehand, which requires registration with DAVID.
+#'      plotZScores(fnAnot.list1, fnAnot.list2)
+#' }
+plotZScores <- function(setA, setB, plotNA=FALSE, model='lm') {
+    if (all(c("Category", "X.", "PValue", "Benjamini") %in% names(setA))) {
+        setA = extractGOFromAnnotation(setA)
+        zAll = doZtrans.single(setA, "SetA")
+        names(zAll)[ncol(zAll)] = "SetA"
+    } else {
+        stop("SetA needs to be of type DAVIDFunctionalAnnotationChart")
+    }
+
+    if (all(c("Category", "X.", "PValue", "Benjamini") %in% names(setB))) {
+        setB = extractGOFromAnnotation(setB)
+        zB   = doZtrans.single(setB, "SetB")
+        zAll = merge(zAll, zB, by = "Term", all.x = T, all.y = T)
+        names(zAll)[ncol(zAll)] = "SetB"
+    } else {
+        stop("SetB needs to be of type DAVIDFunctionalAnnotationChart")
+    }
+
+    zAll = zAll[complete.cases(zAll),]
+    "
+    zAll[is.na(zAll)] <- 0
+    "
+    zAll$SetA = abs(zAll$SetA)
+    zAll$SetB = abs(zAll$SetB)
+    
+
+    goList = list()
+    for(i in 1:nrow(zAll)) {
+        geneA = subset(setA, Term == zAll[i,1])$Genes
+        geneB = subset(setB, Term == zAll[i,1])$Genes
+        term  = zAll[i,1]
+        geneA = strsplit(geneA, ', ')
+        geneB = strsplit(geneB, ', ')
+        if(length(geneA) == 0  | length(geneB) == 0) {
+            zAll[i,"jaccard"] = 0
+            next
+        }
+
+        names(geneA) = "a"
+        names(geneB) = "b"
+        geneA = as.vector(geneA$a)
+        geneB = as.vector(geneB$b)
+        n = intersect(geneA, geneB)
+        u = union(geneA, geneB)
+        zAll[i, "jaccard"] = length(n)/length(u)
+    }
+
+    corr = cor(zAll$SetA, zAll$SetB)
+    corr = format(round(corr, 4), nsmall=4)
+    print(corr)
+    p = ggplot(zAll, aes(SetA, SetB))
+    p = p + geom_point(aes_string(colour="jaccard"), size=2) + theme(axis.text.x=element_text(size=6), axis.text.y=element_text(size=6),
+        axis.line=element_line(), axis.title=element_text(size=6, face="bold"), legend.text=element_text(size=6), legend.title=element_text(size=6))
+    p = p + scale_colour_gradient2(expression(over(abs(paste("A", intersect(), "B")), abs(paste("A", union(), "B")))),
+        low="red", mid="red", high="blue", limits=c(0, 1))
+    p = p + annotate("text", label = paste("R=", corr), x = Inf, hjust = 1, y = Inf, vjust = 5, size = 5, colour = "black")
+    p = p + geom_smooth(method=model)
+    return(p)
+}
+
 #' @title Generates a scatterplot of two sets of GO terms
 #' @description Generates a -log10 scatterplot of two sets of GO terms by p-value or corrected p-value with linear fit and correlation
 #' @export
-# @import RDAVIDWebService
-# @import ggplot2
 #' @param setA DAVIDFunctionalAnnotationChart object to compare
 #' @param setB DAVIDFunctionalAnnotationChart object to compare
 #' @param cutoff The p-value or adjusted p-value to use as a cutoff

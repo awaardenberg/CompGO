@@ -8,11 +8,13 @@
 #' @param db A TranscriptDb object containing the transcripts of the organism required
 #' @export
 #' @return A GRanges object with corresponding EntrezGene IDs
+#' @references Thanks to Marc Carlson for his suggestions
 #' @examples
-#'   data(ucsc.mm9)
+#'   library(TxDb.Mmusculus.UCSC.mm9.knownGene)
+#'   txdb = TxDb.Mmusculus.UCSC.mm9.knownGene
 #'   data(bed.sample)
-#'   x = annotateBedFromUCSC(bedfile = bed.sample, db = ucsc.mm9)
-#'   str(x)
+#'   x = annotateBedFromUCSC(bedfile = bed.sample, db = txdb)
+#'   x
 annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL) {
     if (!is.null(path) && !is.null(bedfile))
         stop("Both bed and path supplied, please use only one.")
@@ -45,14 +47,13 @@ annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL) {
 #' @examples
 #'   ## not run because registration is required
 #'   \dontrun{
-#'      fnAnot = getFnAnot_genome(entrezList,
+#'      fnAnot = getFnAnot_genome(exp1$GENEID,
 #'          email = "your.registered@@email.com",
 #'          idType="ENTREZ_GENE_ID", listName="My_gene_list-1")
 #'      david = DAVIDWebService$new(email = "your.registered@@email.com")
 #'      fnAnot = getFnAnot_genome(entrezList, david = david)
 #'   }
 getFnAnot_genome <- function(geneList, david = NULL, email = NULL, idType = "ENTREZ_GENE_ID", listName = "auto_list", rawValues = T) {
-    #require('RDAVIDWebService')
     if (is.null(david) && !is.null(email)) {
         david <- DAVIDWebService$new(email = email)
     }
@@ -289,7 +290,7 @@ extractPvalTable <- function(setA, setB, useRawPvals) {
 #' @examples
 #' \dontrun{
 #'      # This is not run because it requires the entire pathway
-#'      # to be complete beforehand, which takes too long.
+#'      # to be complete beforehand, which requires registration with DAVID.
 #'      plotPairwise(fnAnot.list1, fnAnot.list2, cutoff=0.05)
 #' }
 plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=FALSE, model='lm', ontology=NULL) {

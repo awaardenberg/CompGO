@@ -165,11 +165,24 @@ doZtrans.single <- function(x, name){
     return(x)
 }
 
+##############################
+### END
+##############################
+
+doZtrans.merge <- function(setA, setB) {
+    a = doZtrans.single(setA, "SetA")
+    b = doZtrans.single(setB, "SetB")
+    z.merge <- merge(a, b, by="Term", all.x=TRUE, all.y = TRUE)
+    names(z.merge) = c("Term", "SetA", "SetB")
+    return(z.merge)
+}
+
 #' @title Plot ECDFs of two functional annotation charts and include K-S statistics of distribution similarity
 #' @description Uses a two-sample Kolmogorov-Smirnov test on the supplied fnAnot charts to test whether the underlying distributions of their P-values differ. Can be used as a metric for similarity between test sets.
 #' @param setA A DAVIDFunctionalAnnotationChart to compare
 #' @param setB A DAVIDFunctionalAnnotationChart to compare
 #' @param useRawPvals Use raw P-values instead of Benjamini-corrected
+#' @param useZscores Instead of comparing P-values, normalise the GO terms to Z-scores and perform test on that
 #' @export
 #' @examples
 #' # don't run, it just produces a plot which is not instructive in CLI examples
@@ -177,8 +190,12 @@ doZtrans.single <- function(x, name){
 #' p = ksTest(fnAnot.1, fnAnot.2)
 #' plot(p)
 #' }
-ksTest <- function(setA, setB, useRawPvals = FALSE) {
-    x = extractPvalTable(setA, setB, useRawPvals)
+ksTest <- function(setA, setB, useRawPvals = FALSE, useZscores = TRUE) {
+    if(useZscores == T)
+        x = doZtrans.merge(setA, setB)
+    else
+        x = extractPvalTable(setA, setB, useRawPvals)
+
     stats <- ks.test(x[,2], x[,3])
     D.stat <- round(stats$statistic[[1]], 3)
     p.stat <- round(stats$p.value, 3)
@@ -311,7 +328,6 @@ plotZScores <- function(setA, setB, plotNA=FALSE, model='lm') {
     "
     zAll$SetA = abs(zAll$SetA)
     zAll$SetB = abs(zAll$SetB)
-    
 
     goList = list()
     for(i in 1:nrow(zAll)) {

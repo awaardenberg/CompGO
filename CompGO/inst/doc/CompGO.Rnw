@@ -14,9 +14,7 @@
 \maketitle
 %\VignetteIndexEntry{Introduction}
 \section{Introduction}
-This package contains functions to accomplish several tasks relating to gene ontology enrichment comparison and visualisation. It interfaces with rtracklayer and VariantAnnotation to easily annotate .bed files with genes, and with RDAVIDWebService to generate functional annotation charts based on these gene lists. From here, we provide several methods for visualisation, including viewing the GO term hierarchy
-%TODO: Write this
-This package contains functions to accomplish several tasks. It is able to download full genome databases from UCSC, import .bed files easily, annotate these .bed file regions with genes (plus distance) from aforementioned database dumps, interface with DAVID to create functional annotation and gene ontology enrichment charts based on gene lists (such as those generated from input .bed files) and finally visualise and compare these enrichments using either directed acyclic graphs or scatterplots.
+This package contains functions to accomplish several tasks relating to gene ontology enrichment comparison and visualisation. It interfaces with rtracklayer and VariantAnnotation to easily annotate .bed files with genes, and with RDAVIDWebService to generate functional annotation charts based on these gene lists. From here, we provide several methods for visualisation, including viewing the GO term hierarchy in two samples using a directed acyclic graph (DAG), performing a z-score standardisation on the GO terms returned from DAVID, comparing these directly using a pairwise scatterplot with linear fit and Jaccard metric, performing a Kolomogorov-Smirnov test against the distributions to determine their similarity, and clustering multiple inputs into a dendrogram.
 
 %\VignetteIndexEntry{Dumping UCSC databases}
 \section{Dumping UCSC databases}

@@ -156,14 +156,16 @@ zTransformDirectory <- function(inputDir, plot=T, cutoff=NULL) {
 #' }
 doZtrans.single <- function(x, name){
 #Z-stats
-    x <- cbind(x, "OR"= (x[,3]/x[,7])/(x[,8]/x[,9]))
-    x <- cbind(x, "SE"=sqrt(1/x[,3] + 1/x[,7] + 1/x[,8] +1/x[,9]))
-    x <- cbind(x, "Z"= log(x$OR)/x$SE)
+    df = data.frame("Term" = x$Term)
+    df <- cbind(df, "OR"= (x[,3]/x[,7])/(x[,8]/x[,9]))
+    df <- cbind(df, "SE"=sqrt(1/x[,3] + 1/x[,7] + 1/x[,8] +1/x[,9]))
+    df <- cbind(df, "Z"= log(df$OR)/df$SE)
 #replace NAs with appropriate values:
-    x$Z[is.na(x$Z)] <- 0
-    x <- cbind(x[2], "Z"=x$Z)
-    colnames(x)<-c("Term", name)
-    return(x)
+    df$Z[is.na(df$Z)] <- 0
+    df = subset(df, select=c(Term, Z))
+    #df <- cbind("Term" = df$Term, "Z"=df$Z)
+    colnames(df)<-c("Term", name)
+    return(df)
 }
 
 ##############################
@@ -307,21 +309,20 @@ extractPvalTable <- function(setA, setB, useRawPvals) {
 #' }
 plotZScores <- function(setA, setB, model='lm') {
     if (all(c("Category", "X.", "PValue", "Benjamini") %in% names(setA))) {
-        setA = extractGOFromAnnotation(setA)
-        zAll = doZtrans.single(setA, "SetA")
-        names(zAll)[ncol(zAll)] = "SetA"
+        #zAll = doZtrans.single(setA, "SetA")
+        #names(zAll)[ncol(zAll)] = "SetA"
     } else {
         stop("SetA needs to be of type DAVIDFunctionalAnnotationChart")
     }
 
     if (all(c("Category", "X.", "PValue", "Benjamini") %in% names(setB))) {
-        setB = extractGOFromAnnotation(setB)
-        zB   = doZtrans.single(setB, "SetB")
-        zAll = merge(zAll, zB, by = "Term", all.x = T, all.y = T)
-        names(zAll)[ncol(zAll)] = "SetB"
+        #zB   = doZtrans.single(setB, "SetB")
+        #zAll = merge(zAll, zB, by = "Term", all.x = T, all.y = T)
+        #names(zAll)[ncol(zAll)] = "SetB"
     } else {
         stop("SetB needs to be of type DAVIDFunctionalAnnotationChart")
     }
+    zAll = doZtrans.merge(setA, setB)
 
     zAll = zAll[complete.cases(zAll),]
     "
@@ -602,3 +603,4 @@ plotTwoGODags <- function (anot1, anot2, add.counts = TRUE, max.nchar = 60, node
 # plot the tree!
     plot(join(g1,g2), ..., nodeAttrs = nattr)
 }
+              

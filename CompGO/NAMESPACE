@@ -7,7 +7,7 @@ export(plotTwoGODags)
 export(slidingJaccard)
 export(zTransformDirectory)
 
-import(rtracklayer, Rgraphviz, ggplot2, VariantAnnotation)
+import(rtracklayer, Rgraphviz, ggplot2, GenomicFeatures)
 importClassFrom(RDAVIDWebService, DAVIDWebService)
 importFrom("RDAVIDWebService", connect, addList, setAnnotationCategories, setCurrentBackgroundPosition, getFunctionalAnnotationChart)
 importFrom("RDAVIDWebService", DAVIDFunctionalAnnotationChart, DAVIDGODag)

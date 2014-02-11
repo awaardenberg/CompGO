@@ -2,20 +2,20 @@
 # by Sam Bassett and Ash Waardenberg, VCCRI, 2014
 
 #' @title Annotate .bed file with closest genes
-#' @description Wrapper for locateVariants(). Returns a GRanges with the gene and transcript ids associated with the input .bed regions.
+#' @description Wrapper for transcriptsByOverlaps(). Returns a GRanges with the gene and transcript ids associated with the input .bed regions.
 #' @param path The system path to a .bed file
 #' @param bedfile If the user has a .bed file already loaded in R, they can supply it here rather than re-importing it
 #' @param db A TranscriptDb object containing the transcripts of the organism required
+#' @param window The window around a .bed region to search for genes, default 5kb
 #' @export
-#' @return A GRanges object with corresponding EntrezGene IDs
-#' @references Thanks to Marc Carlson for his suggestions
+#' @return A GRanges object with corresponding EntrezGene IDs in gene_id column, plus transcript IDs in tx_id
 #' @examples
 #'   library(TxDb.Mmusculus.UCSC.mm9.knownGene)
 #'   txdb = TxDb.Mmusculus.UCSC.mm9.knownGene
 #'   data(bed.sample)
 #'   x = annotateBedFromUCSC(bedfile = bed.sample, db = txdb)
 #'   x
-annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL) {
+annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL, window = 5000) {
     if (!is.null(path) && !is.null(bedfile))
         stop("Both bed and path supplied, please use only one.")
     if (is.null(path) && is.null(bedfile))
@@ -28,8 +28,8 @@ annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL) {
             bed = bedfile
         else stop("bedfile must be a GRanges object")
 
-    var = locateVariants(bed, db, IntronVariants())
-    return(var)
+    genes = transcriptsByOverlaps(ranges = bed, x = db, maxgap=window, columns=c('tx_id', 'gene_id'))
+    return(genes)
 }
 
 #' @title Get the functional annotation table of a gene list using DAVID
@@ -47,7 +47,7 @@ annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL) {
 #' @examples
 #'   ## not run because registration is required
 #'   \dontrun{
-#'      fnAnot = getFnAnot_genome(exp1$GENEID,
+#'      fnAnot = getFnAnot_genome(exp1$gene_id,
 #'          email = "your.registered@@email.com",
 #'          idType="ENTREZ_GENE_ID", listName="My_gene_list-1")
 #'      david = DAVIDWebService$new(email = "your.registered@@email.com")

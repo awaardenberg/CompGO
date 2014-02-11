@@ -13,7 +13,8 @@
 #'   library(TxDb.Mmusculus.UCSC.mm9.knownGene)
 #'   txdb = TxDb.Mmusculus.UCSC.mm9.knownGene
 #'   data(bed.sample)
-#'   x = annotateBedFromUCSC(bedfile = bed.sample, db = txdb)
+#'   range = GRanges(seqnames=bed.sample$chr, IRanges(start=bed.sample$start, end=bed.sample$end))
+#'   x = annotateBedFromUCSC(bedfile = range, db = txdb)
 #'   x
 annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL, window = 5000) {
     if (!is.null(path) && !is.null(bedfile))
@@ -304,7 +305,7 @@ extractPvalTable <- function(setA, setB, useRawPvals) {
 #'      # to be complete beforehand, which requires registration with DAVID.
 #'      plotZScores(fnAnot.list1, fnAnot.list2)
 #' }
-plotZScores <- function(setA, setB, plotNA=FALSE, model='lm') {
+plotZScores <- function(setA, setB, model='lm') {
     if (all(c("Category", "X.", "PValue", "Benjamini") %in% names(setA))) {
         setA = extractGOFromAnnotation(setA)
         zAll = doZtrans.single(setA, "SetA")

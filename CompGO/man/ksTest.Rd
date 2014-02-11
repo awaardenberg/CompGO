@@ -2,7 +2,7 @@
 \alias{ksTest}
 \title{Plot ECDFs of two functional annotation charts and include K-S statistics of distribution similarity}
 \usage{
-ksTest(setA, setB, useRawPvals = FALSE)
+ksTest(setA, setB, useRawPvals = FALSE, useZscores = TRUE)
 }
 \arguments{
   \item{setA}{A DAVIDFunctionalAnnotationChart to compare}
@@ -11,6 +11,10 @@ ksTest(setA, setB, useRawPvals = FALSE)
 
   \item{useRawPvals}{Use raw P-values instead of
   Benjamini-corrected}
+
+  \item{useZscores}{Instead of comparing P-values,
+  normalise the GO terms to Z-scores and perform test on
+  that}
 }
 \description{
 Uses a two-sample Kolmogorov-Smirnov test on the supplied

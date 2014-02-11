@@ -2,7 +2,7 @@
 \alias{plotZScores}
 \title{Performs z transform on two sets of GO terms and plots scatterplot of result}
 \usage{
-plotZScores(setA, setB, plotNA = FALSE, model = "lm")
+plotZScores(setA, setB, model = "lm")
 }
 \arguments{
   \item{setA}{DAVIDFunctionalAnnotationChart object to

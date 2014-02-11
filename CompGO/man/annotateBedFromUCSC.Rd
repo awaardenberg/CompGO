@@ -31,7 +31,8 @@ regions.
 library(TxDb.Mmusculus.UCSC.mm9.knownGene)
   txdb = TxDb.Mmusculus.UCSC.mm9.knownGene
   data(bed.sample)
-  x = annotateBedFromUCSC(bedfile = bed.sample, db = txdb)
+  range = GRanges(seqnames=bed.sample$chr, IRanges(start=bed.sample$start, end=bed.sample$end))
+  x = annotateBedFromUCSC(bedfile = range, db = txdb)
   x
 }
 

@@ -168,10 +168,6 @@ doZtrans.single <- function(x, name){
     return(df)
 }
 
-##############################
-### END
-##############################
-
 doZtrans.merge <- function(setA, setB) {
     a = doZtrans.single(setA, "SetA")
     b = doZtrans.single(setB, "SetB")
@@ -286,9 +282,9 @@ extractPvalTable <- function(setA, setB, useRawPvals) {
         stop("SetB needs to be of type DAVIDFunctionalAnnotationChart")
     }
 
-    setA_comp = cbind(read.table(text=names(setA_val)), setA_val)
-    setB_comp = cbind(read.table(text=names(setB_val)), setB_val)
-    comp = merge(setA_comp, setB_comp, all=TRUE)
+    setA_comp = data.frame("Term" = names(setA_val), "SetA" = setA_val)
+    setB_comp = data.frame("Term" = names(setB_val), "SetB" = setB_val)
+    comp = merge(setA_comp, setB_comp, all.x=TRUE, all.y=T, by="Term")
 
     return(comp)
 }
@@ -309,6 +305,10 @@ plotZScores <- function(setA, setB, model='lm') {
     if (all(c("Category", "X.", "PValue", "Benjamini") %in% names(setA))) {
         #zAll = doZtrans.single(setA, "SetA")
         #names(zAll)[ncol(zAll)] = "SetA"
+        if(is.factor(setA$Term))
+            setA$Term = as.vector(setA$Term)
+        if(is.factor(setA$Genes))
+            setA$Genes = as.vector(setA$Genes)
     } else {
         stop("SetA needs to be of type DAVIDFunctionalAnnotationChart")
     }
@@ -317,6 +317,10 @@ plotZScores <- function(setA, setB, model='lm') {
         #zB   = doZtrans.single(setB, "SetB")
         #zAll = merge(zAll, zB, by = "Term", all.x = T, all.y = T)
         #names(zAll)[ncol(zAll)] = "SetB"
+        if(is.factor(setB$Term))
+            setB$Term = as.vector(setB$Term)
+        if(is.factor(setB$Genes))
+            setB$Genes = as.vector(setB$Genes)
     } else {
         stop("SetB needs to be of type DAVIDFunctionalAnnotationChart")
     }
@@ -326,9 +330,9 @@ plotZScores <- function(setA, setB, model='lm') {
 # TODO: This, but properly
     "
     zAll[is.na(zAll)] <- 0
-    "
     zAll$SetA = abs(zAll$SetA)
     zAll$SetB = abs(zAll$SetB)
+    "
 
     goList = list()
     for(i in 1:nrow(zAll)) {
@@ -391,30 +395,36 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
     }
     #require('RDAVIDWebService')
     if (all(c("Category", "X.", "PValue", "Benjamini") %in% names(setA))) {
-        setA = extractGOFromAnnotation(setA)
-        if (useRawPvals) {
+        #setA = extractGOFromAnnotation(setA)
+        if (useRawPvals)
             setA_val = setA$PValue
-        } else {
+        else
             setA_val = setA$Benjamini
-        }
+
+        if(is.factor(setA$Genes))
+            setA$Genes = as.vector(setA$Genes)
+
         names(setA_val) = setA$Term
     } else {
         stop("SetA needs to be of type DAVIDFunctionalAnnotationChart")
     }
     if (all(c("Category", "X.", "PValue", "Benjamini") %in% names(setB))) {
-        setB = extractGOFromAnnotation(setB)
-        if (useRawPvals) {
+        #setB = extractGOFromAnnotation(setB)
+        if (useRawPvals)
             setB_val = setB$PValue
-        } else {
+        else
             setB_val = setB$Benjamini
-        }
+
+        if(is.factor(setB$Genes))
+            setB$Genes = as.vector(setB$Genes)
+
         names(setB_val) = setB$Term
     } else {
         stop("SetB needs to be of type DAVIDFunctionalAnnotationChart")
     }
 
-    setA_comp = data.frame("Term" = names(setA_val), "SetA" = setA_val)
-    setB_comp = data.frame("Term" = names(setB_val), "SetB" = setB_val)
+    setA_comp = data.frame("Term" = names(setA_val), "setA_val" = setA_val)
+    setB_comp = data.frame("Term" = names(setB_val), "setB_val" = setB_val)
     comp = merge(setA_comp, setB_comp, all.x=TRUE, all.y=T, by="Term")
 
     if(plotNA) {

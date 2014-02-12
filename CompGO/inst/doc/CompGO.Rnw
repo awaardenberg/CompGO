@@ -27,7 +27,7 @@ data(bed.sample)
 sample.range = GRanges(seqnames=bed.sample$chr, IRanges(start=bed.sample$start, end=bed.sample$end))
 # Note that the window around the .bed region beyond which genes are cutoff is 5kb, this is modifiable
 sample.annotated = annotateBedFromDb(bedfile = sample.range, db = TxDb.Mmusculus.UCSC.mm9.knownGene)
-str(sample.annotated)
+head(sample.annotated)
 @
 
 Once we have this annotated GRanges object, we can use the list of genes contained within to query DAVID and return the full functional annotation chart. Note that there are several parameters available for tweaking here, especially \begin{verbatim}rawValues\end{verbatim} - this parameter tells DAVID to do no thresholding of results whatsoever, giving the user of this package the power to perform their own thresholding. Since DAVID requires registration before the use of their Web Service R package, you should register first then substitute the placeholder email for your own.
@@ -37,6 +37,17 @@ Once we have this annotated GRanges object, we can use the list of genes contain
 data(funChart1)
 data(funChart2)
 str(funChart1)
+@
+
+Now that you have several functional annotation charts, we can start comparing and visualising them. If you had an entire directory of them, it's possible to generate a dendrogram from them to measure their similarity using the \begin{verbatim}zTransformDirectory\end{verbatim} function - here, however, we will focus on finer comparison methods.\\
+A good measure of similarity between the sets is the Kolomogorov-Smirnov test, performed as follows:
+<<>>=
+ksTest(funChart1, funChart2)
+@
+
+This plot shows that there is significant difference between the distributions of charts 1 and 2. Going further, we can determine that almost no genes are shared by the two gene sets and there is next to no functional correlation by looking at the pairwise plots:
+<<>>=
+plotZScores(funChart1, funChart2)
 @
 
 %\VignetteIndexEntry{Dumping UCSC databases}

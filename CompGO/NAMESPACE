@@ -1,4 +1,4 @@
-export(annotateBedFromUCSC)
+export(annotateBedFromDb)
 export(getFnAnot_genome)
 export(zTransformDirectory)
 export(doZtrans.single)

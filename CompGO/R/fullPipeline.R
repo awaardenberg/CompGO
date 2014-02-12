@@ -14,9 +14,9 @@
 #'   txdb = TxDb.Mmusculus.UCSC.mm9.knownGene
 #'   data(bed.sample)
 #'   range = GRanges(seqnames=bed.sample$chr, IRanges(start=bed.sample$start, end=bed.sample$end))
-#'   x = annotateBedFromUCSC(bedfile = range, db = txdb)
+#'   x = annotateBedFromDb(bedfile = range, db = txdb)
 #'   x
-annotateBedFromUCSC <- function(path = NULL, bedfile = NULL, db = NULL, window = 5000) {
+annotateBedFromDb <- function(path = NULL, bedfile = NULL, db = NULL, window = 5000) {
     if (!is.null(path) && !is.null(bedfile))
         stop("Both bed and path supplied, please use only one.")
     if (is.null(path) && is.null(bedfile))
@@ -380,7 +380,7 @@ plotZScores <- function(setA, setB, model='lm') {
 #'      # to be complete beforehand, which requires registration with DAVID.
 #'      plotPairwise(fnAnot.list1, fnAnot.list2, cutoff=0.05)
 #' }
-plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=FALSE, model='lm', ontology=NULL) {
+plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=T, model='lm', ontology=NULL) {
     if(!is.null(ontology)) {
         if(ontology %in% c("BP", "MF", "CC")) {
             setA = subOntology(setA, ontology)
@@ -413,9 +413,15 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
         stop("SetB needs to be of type DAVIDFunctionalAnnotationChart")
     }
 
-    setA_comp = cbind(read.table(text=names(setA_val)), setA_val)
-    setB_comp = cbind(read.table(text=names(setB_val)), setB_val)
-    comp = merge(setA_comp, setB_comp, all=TRUE)
+    setA_comp = data.frame("Term" = names(setA_val), "SetA" = setA_val)
+    setB_comp = data.frame("Term" = names(setB_val), "SetB" = setB_val)
+    comp = merge(setA_comp, setB_comp, all.x=TRUE, all.y=T, by="Term")
+
+    if(plotNA) {
+        comp[is.na(comp)] <- 1
+    } else {
+        comp = comp[complete.cases(comp),]
+    }
 
     if(!is.null(cutoff)) {
         comp = subset(comp, (setA_val < cutoff | setB_val < cutoff))
@@ -449,12 +455,6 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
         n = intersect(geneA, geneB)
         u = union(geneA, geneB)
         comp[i, "jaccard"] = length(n)/length(u)
-    }
-
-    if(plotNA) {
-        comp[is.na(comp)] <- 1
-    } else {
-        comp = comp[complete.cases(comp),]
     }
 
     corr = cor(-log10(comp$setA_val), -log10(comp$setB_val))

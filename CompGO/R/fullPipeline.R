@@ -190,10 +190,9 @@ doZtrans.merge <- function(setA, setB) {
 #' @examples
 #' # don't run, it just produces a plot which is not instructive in CLI examples
 #' \dontrun{
-#' p = ksTest(fnAnot.1, fnAnot.2)
-#' plot(p)
+#' ksTest(fnAnot.1, fnAnot.2)
 #' }
-ksTest <- function(setA, setB, useRawPvals = FALSE, useZscores = TRUE) {
+ksTest <- function(setA, setB, useRawPvals = FALSE, useZscores = FALSE) {
     if(useZscores == T)
         x = doZtrans.merge(setA, setB)
     else
@@ -207,12 +206,11 @@ ksTest <- function(setA, setB, useRawPvals = FALSE, useZscores = TRUE) {
     ecdf.a <- ecdf(x[,2])
     ecdf.b <- ecdf(x[,3])
 #set plotting parameters:
-    p = plot(ecdf.a, verticals=TRUE, do.points=FALSE,
-        col="red", main="", xlab="pval", ylab="Cumulative Probability")
-    p = p + plot(ecdf.b, verticals=TRUE, do.points=FALSE, col="green", add=TRUE)
-    p = p + legend("bottomright", c(paste("D=", D.stat, sep=""), paste("p=", p.stat, sep="")), pch=1,
+    plot(ecdf.a, verticals=TRUE, do.points=FALSE,
+        col="red", main="", xlab=ifelse(useZscores,"zscore","pval"), ylab="Cumulative Probability")
+    plot(ecdf.b, verticals=TRUE, do.points=FALSE, col="green", add=TRUE)
+    legend("bottomright", c(paste("D=", D.stat, sep=""), paste("p=", p.stat, sep="")), pch=1,
         title="K-S stats:", inset = .02)
-    return(p)
 }
 
 #' @title Plot two functional annotation charts using a sliding Jaccard coefficient
@@ -325,6 +323,7 @@ plotZScores <- function(setA, setB, model='lm') {
     zAll = doZtrans.merge(setA, setB)
 
     zAll = zAll[complete.cases(zAll),]
+# TODO: This, but properly
     "
     zAll[is.na(zAll)] <- 0
     "
@@ -469,7 +468,6 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
         low="red", mid="red", high="blue", limits=c(0, 1))
     p = p + annotate("text", label = paste("R=", corr, "Jc=", totJaccard), x = Inf, hjust = 1, y = Inf, vjust = 5, size = 5, colour = "black")
     p = p + geom_smooth(method=model)
-    #plot(p)
     return(p)
 }
 
@@ -603,4 +601,4 @@ plotTwoGODags <- function (anot1, anot2, add.counts = TRUE, max.nchar = 60, node
 # plot the tree!
     plot(join(g1,g2), ..., nodeAttrs = nattr)
 }
-              
+

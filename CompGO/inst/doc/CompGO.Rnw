@@ -50,6 +50,11 @@ This plot shows that there is significant difference between the distributions o
 plotZScores(funChart1, funChart2)
 @
 
+This is confirmed by the sliding Jaccard metric, which shows that the overlap between the most significant terms of each list is very poor:
+<<>>=
+slidingJaccard(funChart1, funChart2)
+@
+
 %\VignetteIndexEntry{Dumping UCSC databases}
 \section{Dumping UCSC databases}
 We provide the UCSC mm9 refGene database as a data file, but if a different track is needed this function can be used to do so. It can sometimes take some time to run, since it's downloading a large file.

@@ -33,9 +33,11 @@ head(sample.annotated)
 Once we have this annotated GRanges object, we can use the list of genes contained within to query DAVID and return the full functional annotation chart. Note that there are several parameters available for tweaking here, especially \begin{verbatim}rawValues\end{verbatim} - this parameter tells DAVID to do no thresholding of results whatsoever, giving the user of this package the power to perform their own thresholding. Since DAVID requires registration before the use of their Web Service R package, you should register first then substitute the placeholder email for your own.
 <<>>=
 # fnAnot = getFnAnot_genome(sample.annotated$gene_id, email = "PLaceholder@@inst.edu", listName="sample")
-# We instead use examples from the RDAVIDWebService package:
+# We instead use examples from the RDAVIDWebService package, but without KEGG data:
 data(funChart1)
 data(funChart2)
+funChart1 = subset(funChart1, Category %in% c("GOTERM_BP_ALL", "GOTERM_MF_ALL", "GOTERM_CC_ALL"))
+funChart2 = subset(funChart2, Category %in% c("GOTERM_BP_ALL", "GOTERM_MF_ALL", "GOTERM_CC_ALL"))
 str(funChart1)
 @
 

@@ -491,21 +491,14 @@ extractGOFromAnnotation <- function(fnAnot) {
 
 #' @title Plots a directed acyclic graph of GO terms from two different sources
 #' @description Plots a directed acyclic graph of GO terms from two different sources, using colour to show intersection and difference
-#' @param anot1 A DAVIDFunctionalAnnotationChart object
-#' @param anot2 A DAVIDFunctionalAnnotationChart object
-#' @param node.colors The colours to display each node
-#' @param relaxPvals See details
+#' @param setA A DAVIDFunctionalAnnotationChart object
+#' @param setB A DAVIDFunctionalAnnotationChart object
 #' @param ont The ontology to use, one of BP, MF and CC
-#' @param add.counts Whether to add counts of each GO term to the nodes in the graph
-#' @param max.nchar Maximum length of GO term to print
-#' @param node.shape The shape of nodes to print on the graph
-#' @param showBonferroni Whether to show the corrected P value on each node
-#' @param ... Further arguments to pass to plot
+#' @param maxLabel Maximum length of GO term to print
+#' @param cutoff The PValue cutoff to use
 #' @export
 # @import RDAVIDWebService
 # @import Rgraphviz
-#' @details Allows the relaxation of pvalues in order to control for thresholding - if the cutoff is, say, 0.05 and one term is present at 0.049 and the other at 0.051, with relaxPvals FALSE
-#'    this will show up as a term significantly enriched in one and not the other. This is an adaptation of code supplied by the package RDAVIDWebService under function plotGOTermGraph.
 #' @references Fresno, C. and Fernandes, E. (2013) RDAVIDWebService: An R Package for retrieving data from DAVID into R objects using Web Services API.
 #'      \url{http://david.abcc.ncifcrf.gov/}
 #' @examples
@@ -514,101 +507,51 @@ extractGOFromAnnotation <- function(fnAnot) {
 #'      # which takes too long for compilation.
 #'      plotTwoGODags(fnAnot.geneList1, fnAnot.geneList2)
 #' }
-plotTwoGODags <- function (anot1, anot2, add.counts = TRUE, max.nchar = 60, node.colors = c(sig1 = "red",
-    sig2 = "lightgreen", both="yellow", not = "white"), relaxPvals = FALSE, node.shape = "box", showBonferroni = FALSE, ont = "BP",...) {
-    #require('RDAVIDWebService')
-    if(class(anot1) != 'DAVIDFunctionalAnnotationChart') {
-        anot1=DAVIDFunctionalAnnotationChart(anot1)
+plotTwoGODags <- function (setA, setB, ont = "BP", cutoff = 0.1, maxLabel = 20) {
+# Hacky way to produce GO graph object
+    i = sapply(setA, is.factor)
+    setA[i] = lapply(setA[i], as.character)
+    i = sapply(setB, is.factor)
+    setB[i] = lapply(setB[i], as.character)
+
+    overlap  = intersect(setA$Term, setB$Term)
+    setBuniq = subset(setB, !setB$Term %in% overlap)
+
+    #setU = setA
+    setU = rbind(setA, setBuniq)
+    # sort by PValue
+    setU = setU[with(setU, order(PValue)), ]
+    rownames(setU) = 1:nrow(setU)
+
+    setU = setU[!duplicated(setU[,'Term']),]
+    setU$List.Total = nrow(setU)
+
+    setU = DAVIDFunctionalAnnotationChart(setU)
+
+    if(ont %in% c("BP", "MF", "CC")) {
+        r = DAVIDGODag(setU, ont, cutoff)
+        g = goDag(r)
+    } else {
+        stop("Please supply a valid ontology category")
     }
 
-    if(class(anot2) != 'DAVIDFunctionalAnnotationChart') {
-        anot2=DAVIDFunctionalAnnotationChart(anot2)
-    }
-    r1 = DAVIDGODag(anot1, ont)
-    r2 = DAVIDGODag(anot2, ont)
-    g1 = goDag(r1)
-    g2 = goDag(r2)
+    n = nodes(g)
 
-    #if (!require("Rgraphviz", quietly = TRUE))
-        #stop("The Rgraphviz package is #required for this feature")
-# get three sets of GO terms, one for each and then a union
-    n1 = nodes(g1)
-    n2 = nodes(g2)
-    nall = union(n1, n2)
-# gets term labels, if not present the ids are used
-    termLab <- if ("term" %in% union(names(nodeDataDefaults(g1)), names(nodeDataDefaults(g2)))) {
-        unlist(union(nodeData(g1, attr = "term"), nodeData(g2, attr = "term")))
-    }
-    else nall
-    if(length(termLab) != length(nall)) {
-        termLab = nall
-    }
-# applies a substring if the user supplies a max term length
-    if (!is.null(max.nchar))
-        termLab <- sapply(termLab, substr, 1L, max.nchar, USE.NAMES = FALSE)
-# creates vector with length number of nodes and values "white" (by default) for colouring
-    ncolors <- rep(node.colors["not"], length(nall))
-    if (!is.null(r1) && !is.null(r2) && add.counts) {
-# checks values of node colour argument
-        if (is.null(names(node.colors)) || !all(c("sig1","sig2","both","not") %in%
-            names(node.colors)))
-            stop(paste("invalid node.colors arg:", "must have named elements 'sig1', 'sig2', 'both' and 'not'"))
-# extracts goterms with pvalues from r
-        resultTerms1 <- names(pvalues(r1))
-        resultTerms2 <- names(pvalues(r2))
-        resultTermsAll = union(resultTerms1, resultTerms2)
-# if n is a significant term in r, give ncolors the sig. colour, else not sig. colour
-        if (relaxPvals) {
-            ncolors <-  ifelse(!nall %in% union(sigCategories(r1), sigCategories(r2)), node.colors["not"],
-                        ifelse(nall %in% intersect(names(pvalues(r1)), names(pvalues(r2))), node.colors["both"],
-                        ifelse(nall %in% names(pvalues(r1)), node.colors["sig1"],
-                        ifelse(nall %in% names(pvalues(r2)), node.colors["sig2"],
-                        node.colors["not"]))))
-        } else {
-            ncolors <- ifelse(nall %in% intersect(sigCategories(r1), sigCategories(r2)), node.colors["both"],
-                ifelse(nall %in% sigCategories(r1), node.colors["sig1"], ifelse(nall %in% sigCategories(r2), node.colors["sig2"],
-                node.colors["not"])))
-        }
-# annotate each node with a count as well
-        counts <- sapply(nall, function(x) {
-            if (x %in% intersect(resultTerms1, resultTerms2)) {
-                if (!showBonferroni) {
-                    paste(geneCounts(r1)[x], ", ", geneCounts(r2)[x], sep = "")
-                } else {
-                    paste(bonferronis(r1)[x], ", ", bonferronis(r2)[x], sep = "")
-                }
-                #paste(geneCounts(r1)[x]+geneCounts(r2)[x],"/",universeCounts(r1)[x]+universeCounts(r2)[x],
-                    #sep="")
-            } else if (x %in% resultTerms1) {
-                paste(geneCounts(r1)[x], "/", universeCounts(r1)[x],
-                  sep = "")
-            } else if (x %in% resultTerms2) {
-                paste(geneCounts(r2)[x], "/", universeCounts(r2)[x],
-                  sep = "")
-            } else {
-                "0/??"
-            }
-        })
-# put together the labels and counts for each go term
-        nlab <- paste(termLab, counts)
-    }
-    else {
-        nlab <- termLab
-    }
+    labels = if("term" %in% names(nodeDataDefaults(g))) {
+        unlist(nodeData(g, attr = "term"))
+    } else n
 
-    print("both: ")
-    print(length(grep("yellow", ncolors)))
-    print("r1: ")
-    print(length(grep("red", ncolors)))
-    print("r2: ")
-    print(length(grep("lightgreen", ncolors)))
-    print("neither: ")
-    print(length(grep("white", ncolors)))
-# uses Rgraphviz
-# for each node in g, give it label nlab etc...
-    nattr <- makeNodeAttrs(join(g1, g2), label = nlab, shape = node.shape,
-        fillcolor = ncolors, fixedsize = FALSE)
-# plot the tree!
-    plot(join(g1,g2), ..., nodeAttrs = nattr)
+# Subset term length if supplied
+    if(!is.null(maxLabel))
+        labels = sapply(labels, substr, 1L, maxLabel, USE.NAMES=F)
+
+    setU$Term = sub("~.*","",setU$Term)
+
+    nodeColours = ifelse(names(labels) %in% sub("~.*","",overlap), "yellow", ifelse(names(labels) %in% sub("~.*", "", setA$Term), "red",
+        ifelse(names(labels) %in% sub("~.*", "", setB$Term), "lightgreen", "black")))
+    nodeShapes = ifelse(names(labels) %in% sub("~.*", "", overlap), "rectangle", ifelse(names(labels) %in% sub("~.*", "", setA$Term), "rectangle",
+        ifelse(names(labels) %in% sub("~.*", "", setB$Term), "rectangle", "plaintext")))
+
+    nattr = makeNodeAttrs(g, label = labels, shape = nodeShapes, fillcolor = nodeColours, fixedsize=F, cex=2)
+    plot(g, nodeAttrs = nattr)
 }
-

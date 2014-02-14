@@ -1,32 +1,21 @@
-plotTwoGODags <- function (setA, setB, ont = "BP", cutoff = 0.1) {
+plotTwoGODags <- function (setA, setB, ont = "BP", cutoff = 0.1, maxLabel = 20) {
 # Hacky way to produce GO graph object
     i = sapply(setA, is.factor)
     setA[i] = lapply(setA[i], as.character)
     i = sapply(setB, is.factor)
     setB[i] = lapply(setB[i], as.character)
 
-    setU = merge(setA, setB, by="Term", all.x=T, all.y=T)
-# Now remove the incomplete parts of any row:
-# Ugh.
-    tempSet = setU
-    setU = data.frame(Category = vector(length=nrow(setU)), Term = vector(length=nrow(setU)), Count = vector(length=nrow(setU)),
-        X. = vector(length=nrow(setU)), PValue = vector(length=nrow(setU)), Genes = vector(length=nrow(setU)), List.Total = vector(length=nrow(setU)),
-        Pop.Hits = vector(length=nrow(setU)), Pop.Total = vector(length=nrow(setU)), Fold.Enrichment = vector(length=nrow(setU)),
-        Bonferroni = vector(length=nrow(setU)), Benjamini = vector(length=nrow(setU)), FDR = vector(length=nrow(setU)))
+    overlap  = intersect(setA$Term, setB$Term)
+    setBuniq = subset(setB, !setB$Term %in% overlap)
 
-    setU$Category = ifelse(is.na(tempSet$Category.x),tempSet$Category.y, tempSet$Category.x)
-    setU$Term = tempSet$Term
-    setU$Count = ifelse(is.na(tempSet$Count.x),tempSet$Count.y, tempSet$Count.x)
-    setU$X. = ifelse(is.na(tempSet$X..x),tempSet$X..y, tempSet$X..x)
-    setU$PValue = ifelse(is.na(tempSet$PValue.x),tempSet$PValue.y, tempSet$PValue.x)
-    setU$Genes = ifelse(is.na(tempSet$Genes.x),tempSet$Genes.y, tempSet$Genes.x)
-    setU$List.Total = ifelse(is.na(tempSet$List.Total.x),tempSet$List.Total.y, tempSet$List.Total.x)
-    setU$Pop.Hits = ifelse(is.na(tempSet$Pop.Hits.x),tempSet$Pop.Hits.y, tempSet$Pop.Hits.x)
-    setU$Pop.Total = ifelse(is.na(tempSet$Pop.Total.x),tempSet$Pop.Total.y, tempSet$Pop.Total.x)
-    setU$Fold.Enrichment = ifelse(is.na(tempSet$Fold.Enrichment.x),tempSet$Fold.Enrichment.y, tempSet$Fold.Enrichment.x)
-    setU$Bonferroni = ifelse(is.na(tempSet$Bonferroni.x),tempSet$Bonferroni.y, tempSet$Bonferroni.x)
-    setU$Benjamini = ifelse(is.na(tempSet$Benjamini.x),tempSet$Benjamini.y, tempSet$Benjamini.x)
-    setU$FDR = ifelse(is.na(tempSet$FDR.x),tempSet$FDR.y, tempSet$FDR.x)
+    #setU = setA
+    setU = rbind(setA, setBuniq)
+    # sort by PValue
+    setU = setU[with(setU, order(PValue)), ]
+    rownames(setU) = 1:nrow(setU)
+
+    setU = setU[!duplicated(setU[,'Term']),]
+    setU$List.Total = nrow(setU)
 
     setU = DAVIDFunctionalAnnotationChart(setU)
 
@@ -43,11 +32,17 @@ plotTwoGODags <- function (setA, setB, ont = "BP", cutoff = 0.1) {
         unlist(nodeData(g, attr = "term"))
     } else n
 
-    nodeColours = ifelse(sapply(n, grepl, setU$Term), "yellow", ifelse(sapply(n, grepl, setA$Term), "red",
-        ifelse(sapply(n, grepl, setB$Term), "lightgreen", "black")))
-    nodeShapes = ifelse(sapply(n, grepl, setU$Term), "ellipse", ifelse(sapply(n, grepl, setA$Term), "ellipse",
-            ifelse(sapply(n, grepl, setB$Term), "ellipse", "point")))
+# Subset term length if supplied
+    if(!is.null(maxLabel))
+        labels = sapply(labels, substr, 1L, maxLabel, USE.NAMES=F)
 
-    nattr = makeNodeAttrs(g, label = labels, shape = nodeShapes, fillcolor = nodeColours)
-    plot(g, ..., nodeAttrs = nattr)
+    setU$Term = sub("~.*","",setU$Term)
+
+    nodeColours = ifelse(names(labels) %in% sub("~.*","",overlap), "yellow", ifelse(names(labels) %in% sub("~.*", "", setA$Term), "red",
+        ifelse(names(labels) %in% sub("~.*", "", setB$Term), "lightgreen", "black")))
+    nodeShapes = ifelse(names(labels) %in% sub("~.*", "", overlap), "rectangle", ifelse(names(labels) %in% sub("~.*", "", setA$Term), "rectangle",
+        ifelse(names(labels) %in% sub("~.*", "", setB$Term), "rectangle", "plaintext")))
+
+    nattr = makeNodeAttrs(g, label = labels, shape = nodeShapes, fillcolor = nodeColours, fixedsize=F, cex=2)
+    plot(g, nodeAttrs = nattr)
 }

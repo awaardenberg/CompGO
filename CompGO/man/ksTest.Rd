@@ -2,7 +2,7 @@
 \alias{ksTest}
 \title{Plot ECDFs of two functional annotation charts and include K-S statistics of distribution similarity}
 \usage{
-ksTest(setA, setB, useRawPvals = FALSE, useZscores = TRUE)
+ksTest(setA, setB, useRawPvals = FALSE, useZscores = FALSE)
 }
 \arguments{
   \item{setA}{A DAVIDFunctionalAnnotationChart to compare}
@@ -25,8 +25,7 @@ similarity between test sets.
 \examples{
 # don't run, it just produces a plot which is not instructive in CLI examples
 \dontrun{
-p = ksTest(fnAnot.1, fnAnot.2)
-plot(p)
+ksTest(fnAnot.1, fnAnot.2)
 }
 }
 

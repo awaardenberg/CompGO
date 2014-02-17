@@ -2,8 +2,8 @@
 \alias{plotPairwise}
 \title{Generates a scatterplot of two sets of GO terms}
 \usage{
-plotPairwise(setA, setB, cutoff = NULL, useRawPvals = FALSE,
-  plotNA = FALSE, model = "lm", ontology = NULL)
+plotPairwise(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA = T,
+  model = "lm", ontology = NULL)
 }
 \arguments{
   \item{setA}{DAVIDFunctionalAnnotationChart object to

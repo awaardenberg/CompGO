@@ -2,7 +2,8 @@
 \alias{plotTwoGODags}
 \title{Plots a directed acyclic graph of GO terms from two different sources}
 \usage{
-plotTwoGODags(setA, setB, ont = "BP", cutoff = 0.1, maxLabel = 20)
+plotTwoGODags(setA, setB, ont = "BP", cutoff = 0.1, maxLabel = NULL,
+  fullNames = TRUE, Pvalues = TRUE)
 }
 \arguments{
   \item{setA}{A DAVIDFunctionalAnnotationChart object}
@@ -14,6 +15,12 @@ plotTwoGODags(setA, setB, ont = "BP", cutoff = 0.1, maxLabel = 20)
   \item{maxLabel}{Maximum length of GO term to print}
 
   \item{cutoff}{The PValue cutoff to use}
+
+  \item{fullNames}{Whether to print the full GO term label
+  or just the GO id}
+
+  \item{Pvalues}{Whether to print P-values alongside each
+  label}
 }
 \description{
 Plots a directed acyclic graph of GO terms from two

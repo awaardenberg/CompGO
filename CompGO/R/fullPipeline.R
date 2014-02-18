@@ -55,9 +55,12 @@ annotateBedFromDb <- function(path = NULL, bedfile = NULL, db = NULL, window = 5
 #'      fnAnot = getFnAnot_genome(entrezList, david = david)
 #'   }
 getFnAnot_genome <- function(geneList, david = NULL, email = NULL, idType = "ENTREZ_GENE_ID", listName = "auto_list", rawValues = T) {
-    if (is.null(david) && !is.null(email)) {
+    if (is.null(david) && !is.null(email))
         david <- DAVIDWebService$new(email = email)
-    }
+
+    if(class(geneList) == "GRanges")
+        geneList = unique(unlist(as.character(geneList$gene_id)))
+
     if(!RDAVIDWebService::is.connected(david))
         connect(david)
     message("uploading...")
@@ -496,6 +499,8 @@ extractGOFromAnnotation <- function(fnAnot) {
 #' @param ont The ontology to use, one of BP, MF and CC
 #' @param maxLabel Maximum length of GO term to print
 #' @param cutoff The PValue cutoff to use
+#' @param fullNames Whether to print the full GO term label or just the GO id
+#' @param Pvalues Whether to print P-values alongside each label
 #' @export
 # @import RDAVIDWebService
 # @import Rgraphviz
@@ -507,8 +512,58 @@ extractGOFromAnnotation <- function(fnAnot) {
 #'      # which takes too long for compilation.
 #'      plotTwoGODags(fnAnot.geneList1, fnAnot.geneList2)
 #' }
-plotTwoGODags <- function (setA, setB, ont = "BP", cutoff = 0.1, maxLabel = 20) {
-# Hacky way to produce GO graph object
+plotTwoGODags <- function (setA, setB, ont = "BP", cutoff = 0.1, maxLabel = NULL, fullNames = TRUE, Pvalues = TRUE) {
+    overlap  = intersect(setA$Term, setB$Term)
+    setBuniq = subset(setB, !setB$Term %in% overlap)
+
+    setU = mergeFnAnotCharts(setA, setB)
+
+    if(ont %in% c("BP", "MF", "CC")) {
+        r = DAVIDGODag(setU, ont, cutoff, removeUnattached=T)
+        g = goDag(r)
+    } else {
+        stop("Please supply a valid ontology category")
+    }
+
+    n = nodes(g)
+
+    labels = if(fullNames && "term" %in% names(nodeDataDefaults(g))) {
+        unlist(nodeData(g, attr = "term"))
+    } else n
+
+    if(fullNames && Pvalues) {
+        nodeLabels = paste(names(unlist(nodeData(g, attr = "term"))), "~",
+            unlist(nodeData(g, attr = "term")),"\nP-value:", unlist(nodeData(g, attr="pvalue")), sep='')
+    } else if (fullNames) {
+        nodeLabels = paste(names(unlist(nodeData(g, attr = "term"))), "~",
+            unlist(nodeData(g, attr = "term")), sep="")
+    } else if (Pvalues) {
+        nodeLabels = paste(names(unlist(nodeData(g, attr = "term"))), "\nP-value: ", unlist(nodeData(g, attr="pvalue")), sep='')
+    } else {
+        nodeLabels = n
+    }
+
+# Subset term length if supplied
+    if(!is.null(maxLabel))
+        nodeLabels = sapply(nodeLabels, substr, 1L, maxLabel, USE.NAMES=F)
+
+    setU$Term = sub("~.*","",setU$Term)
+
+    nodeColours = ifelse(names(labels) %in% sub("~.*","",overlap), "yellow", ifelse(names(labels) %in% sub("~.*", "", setA$Term), "red",
+        ifelse(names(labels) %in% sub("~.*", "", setB$Term), "lightgreen", "black")))
+    nodeShapes = ifelse(names(labels) %in% sub("~.*", "", overlap), "rectangle", ifelse(names(labels) %in% sub("~.*", "", setA$Term), "rectangle",
+        ifelse(names(labels) %in% sub("~.*", "", setB$Term), "rectangle", "plaintext")))
+    nodeFont = ifelse(names(labels) %in% sub("~.*", "", overlap), 16, ifelse(names(labels) %in% sub("~.*", "", setA$Term), 16,
+        ifelse(names(labels) %in% sub("~.*", "", setB$Term), 16, 0.1)))
+
+    nattr = makeNodeAttrs(g, label = nodeLabels, shape = nodeShapes, fillcolor = nodeColours, fixedsize=F, fontsize=nodeFont)
+    x <- layoutGraph(g, nodeAttrs = nattr)
+    nodeRenderInfo(x) <- list(fontsize=nattr$fontsize)
+    renderGraph(x)
+    #plot(g, nodeAttrs = nattr)
+}
+
+mergeFnAnotCharts = function(setA, setB) {
     i = sapply(setA, is.factor)
     setA[i] = lapply(setA[i], as.character)
     i = sapply(setB, is.factor)
@@ -527,6 +582,14 @@ plotTwoGODags <- function (setA, setB, ont = "BP", cutoff = 0.1, maxLabel = 20) 
     setU$List.Total = nrow(setU)
 
     setU = DAVIDFunctionalAnnotationChart(setU)
+    return(setU)
+}
+
+plotZrankedDAGs <- function (setA, setB, ont = "BP", cutoff = 0.1, maxLabel = NULL, fullNames = TRUE, Pvalues = TRUE) {
+    overlap  = intersect(setA$Term, setB$Term)
+    setBuniq = subset(setB, !setB$Term %in% overlap)
+
+    setU = mergeFnAnotCharts(setA, setB)
 
     if(ont %in% c("BP", "MF", "CC")) {
         r = DAVIDGODag(setU, ont, cutoff)
@@ -537,13 +600,25 @@ plotTwoGODags <- function (setA, setB, ont = "BP", cutoff = 0.1, maxLabel = 20) 
 
     n = nodes(g)
 
-    labels = if("term" %in% names(nodeDataDefaults(g))) {
+    labels = if(fullNames && "term" %in% names(nodeDataDefaults(g))) {
         unlist(nodeData(g, attr = "term"))
     } else n
 
+    if(fullNames && Pvalues) {
+        nodeLabels = paste(names(unlist(nodeData(g, attr = "term"))), "~",
+            unlist(nodeData(g, attr = "term")),"\nP-value:", unlist(nodeData(g, attr="pvalue")), sep='')
+    } else if (fullNames) {
+        nodeLabels = paste(names(unlist(nodeData(g, attr = "term"))), "~",
+            unlist(nodeData(g, attr = "term")), sep="")
+    } else if (Pvalues) {
+        nodeLabels = paste(names(unlist(nodeData(g, attr = "term"))), "\nP-value: ", unlist(nodeData(g, attr="pvalue")), sep='')
+    } else {
+        nodeLabels = n
+    }
+
 # Subset term length if supplied
     if(!is.null(maxLabel))
-        labels = sapply(labels, substr, 1L, maxLabel, USE.NAMES=F)
+        nodeLabels = sapply(nodeLabels, substr, 1L, maxLabel, USE.NAMES=F)
 
     setU$Term = sub("~.*","",setU$Term)
 
@@ -551,7 +626,12 @@ plotTwoGODags <- function (setA, setB, ont = "BP", cutoff = 0.1, maxLabel = 20) 
         ifelse(names(labels) %in% sub("~.*", "", setB$Term), "lightgreen", "black")))
     nodeShapes = ifelse(names(labels) %in% sub("~.*", "", overlap), "rectangle", ifelse(names(labels) %in% sub("~.*", "", setA$Term), "rectangle",
         ifelse(names(labels) %in% sub("~.*", "", setB$Term), "rectangle", "plaintext")))
+    nodeFont = ifelse(names(labels) %in% sub("~.*", "", overlap), 16, ifelse(names(labels) %in% sub("~.*", "", setA$Term), 16,
+        ifelse(names(labels) %in% sub("~.*", "", setB$Term), 16, 0.1)))
 
-    nattr = makeNodeAttrs(g, label = labels, shape = nodeShapes, fillcolor = nodeColours, fixedsize=F, cex=2)
-    plot(g, nodeAttrs = nattr)
+    nattr = makeNodeAttrs(g, label = nodeLabels, shape = nodeShapes, fillcolor = nodeColours, fixedsize=F, fontsize=nodeFont)
+    x <- layoutGraph(g, nodeAttrs = nattr)
+    nodeRenderInfo(x) <- list(fontsize=nattr$fontsize)
+    renderGraph(x)
+    #plot(g, nodeAttrs = nattr)
 }

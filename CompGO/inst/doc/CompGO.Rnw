@@ -57,63 +57,9 @@ This is confirmed by the sliding Jaccard metric, which shows that the overlap be
 slidingJaccard(funChart1, funChart2)
 @
 
-%\VignetteIndexEntry{Dumping UCSC databases}
-\section{Dumping UCSC databases}
-We provide the UCSC mm9 refGene database as a data file, but if a different track is needed this function can be used to do so. It can sometimes take some time to run, since it's downloading a large file.
-
+Now, a great way to visualise the differences between these two sets is to use a directed acyclic graph of GO terms. Here, we colour each node based on the set or combinations of sets it originated from - yellow nodes are shared between two, red ones are the first input set, green ones are the second. In this case, there are several clear differences - funChart1 is enriched in oxygen and haeme binding, while funChart2 contains terms for transferase and protein kinase activity.
 <<>>=
-## Get UCSC database for human genome, refGene track
-library(CompGO)
-#db = ucscDbDump(genome="hg19") # instead of running this
-    ## unnecessarily, the next statement is equivalent:
-data(ucsc.mm9)
-db = ucsc.mm9
-str(db)
+plotTwoGODags(funChart1, funChart2, ont="MF", cutoff=0.01)
 @
-
-%\VignetteIndexEntry{.bed file importing and annotation}
-\section{.bed file importing and annotation}
-Reading a .bed file into R is easy:
-\begin{verbatim}
-## Not run, needs path
-bed = read.bed('./path_to_file.bed')
-## Sometimes, such as when using biomaRt, the chromosome
-## name must be removed, so an option exists to do so
-bed = read.bed('./path_to_file.bed', subChr=TRUE)
-\end{verbatim}
-Once a .bed file is read, you can start annotation. Here we use the sample .bed file provided.
-<<>>=
-data(bed.sample)
-## This step can take some time
-geneList = annotateBedFromUCSC(bedfile=bed.sample,db=ucsc.mm9)
-str(geneList)
-@
-
-%\VignetteIndexEntry{Functional Enrichment and visualisation}
-\section{Functional Enrichment and visualisation}
-This gene list can then be passed on to DAVID for gene ontology enrichment analysis. This returns an object of type DAVIDFunctionalAnnotationChart, but it can be accessed similarly to a data.frame.
-\begin{verbatim}
-## Not run, since it needs a registered email
-fnAnot = getFnAnot_genome(geneList$name2, email="your_registered@email.com",
-+	idType="REFSEQ_MRNA",listName="sample1")
-str(fnAnot)
-\end{verbatim}
-
-After obtaining an enrichment table, we can visualise differences between two sets of genes (or two .bed files) using either a pairwise scatterplot or a combination directed acyclic graph (DAG), where each node (representing an individual GO term) is coloured based on which set it came from.
-\begin{verbatim}
-## Since this requires email registration, the following won't be run.
-anot1 = getFnAnot_genome(geneList1, email="email@email.com")
-anot2 = getFnAnot_genome(geneList2, email="email@email.com")
-
-## To produce scatterplot:
-plotPairwise(anot1, anot2, cutoff = 0.05) # using benjamini as metric
-# plotting all GO terms, even if they only appear in one set
-plotPairwise(anot1, anot2, plotNA=TRUE, cutoff=0.1)
-
-## For DAGs:
-plotTwoGODags(anot1, anot2) # no relaxation, default colours
-plotTwoGODags(anot1, anot2, relaxPvals = TRUE) # with relaxation
-\end{verbatim}
-
 
 \end{document}

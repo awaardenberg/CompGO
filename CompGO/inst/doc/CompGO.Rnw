@@ -55,7 +55,7 @@ A good measure of similarity between the sets is the Kolomogorov-Smirnov test, p
 \begin{figure}
 \begin{center}
 <<label=fig1,fig=TRUE>>=
-ksTest(funChart1, funChart2)
+ksTest(funChart1, funChart2, useZscores = T)
 @
 \end{center}
 \caption{K-S test on the two sample datasets}

@@ -2,7 +2,7 @@
 # by Sam Bassett and Ash Waardenberg, VCCRI, 2014
 
 #' @title Annotate .bed file with closest genes
-#' @description Wrapper for transcriptsByOverlaps(). Returns a GRanges with the gene and transcript ids associated with the input .bed regions.
+#' @description Wrapper for transcriptsByOverlaps(). Returns a GRanges with the gene and transcript ids associated with the input .bed regions. Often it is worthwhile expanding the search window a bit, because not all .bed regions directly overlap with a transcription start site, so the 'window' parameter is provided to accomplish this.
 #' @param path The system path to a .bed file
 #' @param bedfile If the user has a .bed file already loaded in R, they can supply it here rather than re-importing it
 #' @param db A TranscriptDb object containing the transcripts of the organism required
@@ -10,12 +10,12 @@
 #' @export
 #' @return A GRanges object with corresponding EntrezGene IDs in gene_id column, plus transcript IDs in tx_id
 #' @examples
-#'   library(TxDb.Mmusculus.UCSC.mm9.knownGene)
-#'   txdb = TxDb.Mmusculus.UCSC.mm9.knownGene
-#'   data(bed.sample)
-#'   range = GRanges(seqnames=bed.sample$chr, IRanges(start=bed.sample$start, end=bed.sample$end))
-#'   x = annotateBedFromDb(bedfile = range, db = txdb)
-#'   x
+#' library(TxDb.Mmusculus.UCSC.mm9.knownGene)
+#' txdb = TxDb.Mmusculus.UCSC.mm9.knownGene
+#' data(bed.sample)
+#' range = GRanges(seqnames=bed.sample$chr, IRanges(start=bed.sample$start, end=bed.sample$end))
+#' x = annotateBedFromDb(bedfile = range, db = txdb)
+#' x
 annotateBedFromDb <- function(path = NULL, bedfile = NULL, db = NULL, window = 5000) {
     if (!is.null(path) && !is.null(bedfile))
         stop("Both bed and path supplied, please use only one.")
@@ -34,7 +34,7 @@ annotateBedFromDb <- function(path = NULL, bedfile = NULL, db = NULL, window = 5
 }
 
 #' @title Get the functional annotation table of a gene list using DAVID
-#' @description Uploads a gene list to DAVID, then does a GO enrichment analysis using the genome as the background. Requires registration with DAVID first.
+#' @description Uploads a gene list to DAVID, then does a GO enrichment analysis using the genome as the background. Requires registration with DAVID first. Returns a DAVIDFunctionalAnnotationChart object which can be easily coerced into a data.frame. DAVID does some automatic thresholding on results, we found it useful to get DAVID to return all possible annotations despite non-significant P-values and perform our own thresholding - especially with the introduction of the Z-score standardisation, which is able to show both over- and under-representation of GO terms in a gene set. DAVID will just return a P-value of 1 if something is under-represented.
 #' @export
 #' @param geneList A list of genes to upload and functionally enrich
 #' @param david An RDAVIDWebService object can be passed to the function so a new one doesn't have to be requested each time
@@ -46,14 +46,14 @@ annotateBedFromDb <- function(path = NULL, bedfile = NULL, db = NULL, window = 5
 #' @return Returns a DAVIDFunctionalAnnotationChart after generating it by comparing the supplied gene list to the full
 #'      genome as a background
 #' @examples
-#'   ## not run because registration is required
-#'   \dontrun{
-#'      fnAnot = getFnAnot_genome(exp1$gene_id,
-#'          email = "your.registered@@email.com",
-#'          idType="ENTREZ_GENE_ID", listName="My_gene_list-1")
-#'      david = DAVIDWebService$new(email = "your.registered@@email.com")
-#'      fnAnot = getFnAnot_genome(entrezList, david = david)
-#'   }
+#' ## not run because registration is required
+#' \dontrun{
+#' fnAnot = getFnAnot_genome(exp1$gene_id,
+#'    email = "your.registered@@email.com",
+#'    idType="ENTREZ_GENE_ID", listName="My_gene_list-1")
+#' david = DAVIDWebService$new(email = "your.registered@@email.com")
+#' fnAnot = getFnAnot_genome(entrezList, david = david)
+#' }
 getFnAnot_genome <- function(geneList, david = NULL, email = NULL, idType = "ENTREZ_GENE_ID", listName = "auto_list", rawValues = T) {
     if (is.null(david) && !is.null(email))
         david <- DAVIDWebService$new(email = email)
@@ -92,19 +92,19 @@ subOntology <- function(set, ont) {
 ###########################################
 
 #' @title Z-score transformation of Odds Ratios in files in a directory
-#' @description Given a directory of functional annotation charts, this function iterates over them and
-#' generates Odds Ratio, St. Error and Z scores.
+#' @description Given a directory of functional annotation charts, this function iterates over them and generates Odds Ratio, St. Error and Z scores. This is useful for batch processing, as all the charts can be written to disk somewhere then iterated over by this function automatically. It can also generate a cluster dendrogram based on the relative Z scores for each GO term. This brings up an interesting issue, namely, what should be done with GO terms that are not present in all lists? We provide two options: either the NAs are set as 0, or the incomplete rows are removed.
 #' @param inputDir The directory to search for functional annotation charts
 #' @param plot Whether to plot a dendrogram for visual comparison or not
 #' @param cutoff Reduce the computation to the top n GO terms ranked by variance
+#' @param removeNA True to only generate the dendrogram based on GO terms common to all input enrichment analyses, False to set all NAs as 0
 #' @return Returns a data.frame of z scores, ORs and SEs
 #' @export
 #' @examples
 #' \dontrun{
-#'    #not run as dir required
-#'    zTransformDirectory('../')
+#' #not run as dir required
+#' zTransformDirectory('../')
 #' }
-zTransformDirectory <- function(inputDir, plot=T, cutoff=NULL) {
+zTransformDirectory <- function(inputDir, plot=T, cutoff=NULL, removeNA=F) {
     file.list <- list.files(inputDir, pattern = "fnAnot.txt", full.names = TRUE)
 #initialise the table:
     z.merge <- matrix()
@@ -126,7 +126,10 @@ zTransformDirectory <- function(inputDir, plot=T, cutoff=NULL) {
         }
     }
 #replace NA's with zeros (instances of no hits):
-    z.merge[is.na(z.merge)] <- 0
+    if(removeNA == TRUE)
+        z.merge = z.merge[complete.cases(z.merge),]
+    else
+        z.merge[is.na(z.merge)] <- 0
     z.merge = cbind(z.merge, Var = apply(abs(z.merge[2:ncol(z.merge)]), 1, var))
     z.merge = z.merge[order(-z.merge$Var), ]
     if(!is.null(cutoff))
@@ -155,7 +158,7 @@ zTransformDirectory <- function(inputDir, plot=T, cutoff=NULL) {
 #' @export
 #' @examples
 #' \dontrun{
-#'     fnAnot.zscore = doZtrans.single(fnAnot)
+#' fnAnot.zscore = doZtrans.single(fnAnot)
 #' }
 doZtrans.single <- function(x, name){
 #Z-stats
@@ -185,7 +188,7 @@ doZtrans.merge <- function(setA, setB) {
 #' @param setB A DAVIDFunctionalAnnotationChart to compare
 #' @param useRawPvals Use raw P-values instead of Benjamini-corrected
 #' @param useZscores Instead of comparing P-values, normalise the GO terms to Z-scores and perform test on that
-#' @export
+# @export
 #' @examples
 #' # don't run, it just produces a plot which is not instructive in CLI examples
 #' \dontrun{
@@ -297,14 +300,16 @@ extractPvalTable <- function(setA, setB, useRawPvals) {
 #' @export
 #' @param setA DAVIDFunctionalAnnotationChart object to compare
 #' @param setB DAVIDFunctionalAnnotationChart object to compare
+#' @param plotNA Whether to plot NAs or set them to 0
 #' @param model The model to use when plotting linear fit, default 'lm'
+#' @param cutoff If you want to apply a cutoff to each list before generating Z scores, supply it here
 #' @examples
 #' \dontrun{
-#'      # This is not run because it requires the entire pathway
-#'      # to be complete beforehand, which requires registration with DAVID.
-#'      plotZScores(fnAnot.list1, fnAnot.list2)
+#' # This is not run because it requires the entire pathway
+#' # to be complete beforehand, which requires registration with DAVID.
+#' plotZScores(fnAnot.list1, fnAnot.list2)
 #' }
-plotZScores <- function(setA, setB, model='lm') {
+plotZScores <- function(setA, setB, cutoff = NULL, plotNA = F, model='lm') {
     if (all(c("Category", "X.", "PValue", "Benjamini") %in% names(setA))) {
         #zAll = doZtrans.single(setA, "SetA")
         #names(zAll)[ncol(zAll)] = "SetA"
@@ -327,15 +332,18 @@ plotZScores <- function(setA, setB, model='lm') {
     } else {
         stop("SetB needs to be of type DAVIDFunctionalAnnotationChart")
     }
+
+    if(!is.null(cutoff)) {
+        setA = subset(setA, setA$Benjamini < cutoff)
+        setB = subset(setB, setB$Benjamini < cutoff)
+    }
+
     zAll = doZtrans.merge(setA, setB)
 
-    zAll = zAll[complete.cases(zAll),]
-# TODO: This, but properly
-    "
-    zAll[is.na(zAll)] <- 0
-    zAll$SetA = abs(zAll$SetA)
-    zAll$SetB = abs(zAll$SetB)
-    "
+    if(plotNA == T)
+        zAll[is.na(zAll)] <- 0
+    else
+        zAll = zAll[complete.cases(zAll),]
 
     goList = list()
     for(i in 1:nrow(zAll)) {
@@ -357,6 +365,8 @@ plotZScores <- function(setA, setB, model='lm') {
         u = union(geneA, geneB)
         zAll[i, "jaccard"] = length(n)/length(u)
     }
+
+    browser()
 
     corr = cor(zAll$SetA, zAll$SetB)
     corr = format(round(corr, 4), nsmall=4)
@@ -383,9 +393,9 @@ plotZScores <- function(setA, setB, model='lm') {
 #' @param ontology If a specific ontology (MF, BP, CC) is wanted rather than all terms, supply it here as a string
 #' @examples
 #' \dontrun{
-#'      # This is not run because it requires the entire pathway
-#'      # to be complete beforehand, which requires registration with DAVID.
-#'      plotPairwise(fnAnot.list1, fnAnot.list2, cutoff=0.05)
+#' # This is not run because it requires the entire pathway
+#' # to be complete beforehand, which requires registration with DAVID.
+#' plotPairwise(fnAnot.list1, fnAnot.list2, cutoff=0.05)
 #' }
 plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=T, model='lm', ontology=NULL) {
     if(!is.null(ontology)) {
@@ -451,8 +461,8 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
 
     goList = list()
     for(i in 1:nrow(comp)) {
-        geneA = subset(setA, Term == comp[i,]$V1)$Genes
-        geneB = subset(setB, Term == comp[i,]$V1)$Genes
+        geneA = subset(setA, Term == comp[i,1])$Genes
+        geneB = subset(setB, Term == comp[i,1])$Genes
         goTerm= comp[i,]$V1
         geneA = strsplit(geneA, ', ')
         geneB = strsplit(geneB, ', ')
@@ -508,11 +518,16 @@ extractGOFromAnnotation <- function(fnAnot) {
 #'      \url{http://david.abcc.ncifcrf.gov/}
 #' @examples
 #' \dontrun{
-#'      # The entire pathway must be run for this example to work,
-#'      # which takes too long for compilation.
-#'      plotTwoGODags(fnAnot.geneList1, fnAnot.geneList2)
+#' # The entire pathway must be run for this example to work,
+#' # which takes too long for compilation.
+#' plotTwoGODags(fnAnot.geneList1, fnAnot.geneList2)
 #' }
 plotTwoGODags <- function (setA, setB, ont = "BP", cutoff = 0.1, maxLabel = NULL, fullNames = TRUE, Pvalues = TRUE) {
+    i = sapply(setA, is.factor)
+    setA[i] = lapply(setA[i], as.character)
+    i = sapply(setB, is.factor)
+    setB[i] = lapply(setB[i], as.character)
+
     overlap  = intersect(setA$Term, setB$Term)
     setBuniq = subset(setB, !setB$Term %in% overlap)
 
@@ -564,10 +579,6 @@ plotTwoGODags <- function (setA, setB, ont = "BP", cutoff = 0.1, maxLabel = NULL
 }
 
 mergeFnAnotCharts = function(setA, setB) {
-    i = sapply(setA, is.factor)
-    setA[i] = lapply(setA[i], as.character)
-    i = sapply(setB, is.factor)
-    setB[i] = lapply(setB[i], as.character)
 
     overlap  = intersect(setA$Term, setB$Term)
     setBuniq = subset(setB, !setB$Term %in% overlap)
@@ -585,11 +596,21 @@ mergeFnAnotCharts = function(setA, setB) {
     return(setU)
 }
 
-plotZrankedDAGs <- function (setA, setB, ont = "BP", cutoff = 0.1, maxLabel = NULL, fullNames = TRUE, Pvalues = TRUE) {
+plotRankedZDAG <- function (setA, setB, ont = "BP", n = 100, maxLabel = NULL, fullNames = TRUE, Pvalues = TRUE) {
+
+    i = sapply(setA, is.factor)
+    setA[i] = lapply(setA[i], as.character)
+    i = sapply(setB, is.factor)
+    setB[i] = lapply(setB[i], as.character)
+
     overlap  = intersect(setA$Term, setB$Term)
     setBuniq = subset(setB, !setB$Term %in% overlap)
 
-    setU = mergeFnAnotCharts(setA, setB)
+    setU = merge(setA, setB, by = "Term", all = F)
+# Perform OR/Z-score calculation here
+
+    setU = setU[with(setU, order(Z)), ]
+    setU = setU[1:n,]
 
     if(ont %in% c("BP", "MF", "CC")) {
         r = DAVIDGODag(setU, ont, cutoff)

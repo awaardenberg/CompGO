@@ -4,6 +4,7 @@
 \usepackage{graphicx}
 \usepackage{amssymb}
 \usepackage[affil-it]{authblk}
+\usepackage{verbatim}
 
 \title{CompGO vignette}
 \author{Sam Bassett, Ash Waardenberg}
@@ -36,7 +37,7 @@ head(sample.annotated)
 Once we have this annotated GRanges object, we can use the list of genes contained within to query DAVID and return the full functional annotation chart. Note that there are several parameters available for tweaking here, especially rawValues - this parameter tells DAVID to do no thresholding of results whatsoever, giving the user of this package the power to perform their own thresholding. Since DAVID requires registration before the use of their Web Service R package, you should register first then substitute the placeholder email for your own.
 <<>>=
 # fnAnot = getFnAnot_genome(sample.annotated$gene_id,
-#    email = "PLaceholder@@inst.edu", listName="sample")
+#    email = "PLaceholder@inst.edu", listName="sample")
 # We instead use examples from the RDAVIDWebService package,
 # but without KEGG data:
 data(funChart1)
@@ -51,48 +52,26 @@ str(funChart1)
 \section{Analysis and comparison}
 
 Now that you have several functional annotation charts, we can start comparing and visualising them. If you had an entire directory of them, it's possible to generate a dendrogram from them to measure their similarity using the zTransformDirectory function - here, however, we will focus on finer comparison methods.\\
-A good measure of similarity between the sets is the Kolomogorov-Smirnov test, performed as in Figure 1.\\
+We can determine that almost no genes are shared by the two gene sets and there is next to no functional correlation by looking at the pairwise plots (Figure 1).\\
 \begin{figure}
 \begin{center}
 <<label=fig1,fig=TRUE>>=
-ksTest(funChart1, funChart2, useZscores = T)
-@
-\end{center}
-\caption{K-S test on the two sample datasets}
-\label{fig:one}
-\end{figure}
-
-This plot shows that there is significant difference between the distributions of charts 1 and 2. Going further, we can determine that almost no genes are shared by the two gene sets and there is next to no functional correlation by looking at the pairwise plots (Figure 2).\\
-\begin{figure}
-\begin{center}
-<<label=fig2,fig=TRUE>>=
 plotZScores(funChart1, funChart2)
 @
 \end{center}
 \caption{Pairwise plot of Z scores for the two datasets}
-\label{fig:two}
+\label{fig:one}
 \end{figure}
 
-This is confirmed by the sliding Jaccard metric, which shows that the overlap between the most significant terms of each list is very poor (Figure 3).\\
+Now, a great way to visualise the differences between these two sets is to use a directed acyclic graph of GO terms. Here, we colour each node based on the set or combinations of sets it originated from - yellow nodes are shared between two, red ones are the first input set, green ones are the second. In this case, there are several clear differences - funChart1 is enriched in oxygen and haeme binding, while funChart2 contains terms for transferase and protein kinase activity (Figure 2).\\
 \begin{figure}
 \begin{center}
-<<label=fig3,fig=TRUE>>=
-slidingJaccard(funChart1, funChart2)
-@
-\end{center}
-\caption{Sliding Jaccard metric}
-\label{fig:three}
-\end{figure}
-
-Now, a great way to visualise the differences between these two sets is to use a directed acyclic graph of GO terms. Here, we colour each node based on the set or combinations of sets it originated from - yellow nodes are shared between two, red ones are the first input set, green ones are the second. In this case, there are several clear differences - funChart1 is enriched in oxygen and haeme binding, while funChart2 contains terms for transferase and protein kinase activity (Figure 4).\\
-\begin{figure}
-\begin{center}
-<<label=fig4,fig=TRUE>>=
+<<label=fig2,fig=TRUE>>=
 plotTwoGODags(funChart1, funChart2, ont="MF", cutoff=0.01)
 @
 \end{center}
 \caption{Directed acyclic graph showing differences in GO term enrichment}
-\label{fig:five}
+\label{fig:two}
 \end{figure}
 
 \end{document}

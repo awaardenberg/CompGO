@@ -394,8 +394,6 @@ plotZScores <- function(setA, setB, cutoff = NULL, plotNA = F, model='lm') {
         zAll[i, "jaccard"] = length(n)/length(u)
     }
 
-    browser()
-
     corr = cor(zAll$SetA, zAll$SetB)
     corr = format(round(corr, 4), nsmall=4)
     print(corr)
@@ -554,7 +552,7 @@ extractGOFromAnnotation <- function(fnAnot) {
 #' # which takes too long for compilation.
 #' plotTwoGODags(fnAnot.geneList1, fnAnot.geneList2)
 #' }
-plotTwoGODags <- function (setA, setB, ont = "BP", cutoff = 0.1, maxLabel = NULL, fullNames = TRUE, Pvalues = TRUE) {
+plotTwoGODags <- function (setA, setB, ont = "BP", cutoff = 0.01, maxLabel = NULL, fullNames = TRUE, Pvalues = TRUE) {
     i = sapply(setA, is.factor)
     setA[i] = lapply(setA[i], as.character)
     i = sapply(setB, is.factor)

@@ -35,9 +35,9 @@ correlation
 }
 \examples{
 \dontrun{
-     # This is not run because it requires the entire pathway
-     # to be complete beforehand, which requires registration with DAVID.
-     plotPairwise(fnAnot.list1, fnAnot.list2, cutoff=0.05)
+# This is not run because it requires the entire pathway
+# to be complete beforehand, which requires registration with DAVID.
+plotPairwise(fnAnot.list1, fnAnot.list2, cutoff=0.05)
 }
 }
 

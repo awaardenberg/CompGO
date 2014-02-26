@@ -29,9 +29,9 @@ difference
 }
 \examples{
 \dontrun{
-     # The entire pathway must be run for this example to work,
-     # which takes too long for compilation.
-     plotTwoGODags(fnAnot.geneList1, fnAnot.geneList2)
+# The entire pathway must be run for this example to work,
+# which takes too long for compilation.
+plotTwoGODags(fnAnot.geneList1, fnAnot.geneList2)
 }
 }
 \references{

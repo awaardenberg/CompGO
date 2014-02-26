@@ -36,16 +36,25 @@ as a background
 \description{
 Uploads a gene list to DAVID, then does a GO enrichment
 analysis using the genome as the background. Requires
-registration with DAVID first.
+registration with DAVID first. Returns a
+DAVIDFunctionalAnnotationChart object which can be easily
+coerced into a data.frame. DAVID does some automatic
+thresholding on results, we found it useful to get DAVID to
+return all possible annotations despite non-significant
+P-values and perform our own thresholding - especially with
+the introduction of the Z-score standardisation, which is
+able to show both over- and under-representation of GO
+terms in a gene set. DAVID will just return a P-value of 1
+if something is under-represented.
 }
 \examples{
 ## not run because registration is required
-  \dontrun{
-     fnAnot = getFnAnot_genome(exp1$gene_id,
-         email = "your.registered@email.com",
-         idType="ENTREZ_GENE_ID", listName="My_gene_list-1")
-     david = DAVIDWebService$new(email = "your.registered@email.com")
-     fnAnot = getFnAnot_genome(entrezList, david = david)
-  }
+\dontrun{
+fnAnot = getFnAnot_genome(exp1$gene_id,
+   email = "your.registered@email.com",
+   idType="ENTREZ_GENE_ID", listName="My_gene_list-1")
+david = DAVIDWebService$new(email = "your.registered@email.com")
+fnAnot = getFnAnot_genome(entrezList, david = david)
+}
 }
 

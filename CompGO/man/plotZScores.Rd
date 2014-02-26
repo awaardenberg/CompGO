@@ -27,9 +27,9 @@ fit+correlation
 }
 \examples{
 \dontrun{
-     # This is not run because it requires the entire pathway
-     # to be complete beforehand, which requires registration with DAVID.
-     plotZScores(fnAnot.list1, fnAnot.list2)
+# This is not run because it requires the entire pathway
+# to be complete beforehand, which requires registration with DAVID.
+plotZScores(fnAnot.list1, fnAnot.list2)
 }
 }
 

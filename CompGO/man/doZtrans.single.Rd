@@ -19,7 +19,7 @@ similar
 }
 \examples{
 \dontrun{
-    fnAnot.zscore = doZtrans.single(fnAnot)
+fnAnot.zscore = doZtrans.single(fnAnot)
 }
 }
 

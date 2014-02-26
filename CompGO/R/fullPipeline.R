@@ -3,8 +3,8 @@
 
 #' @title Annotate .bed file with closest genes
 #' @description Wrapper for transcriptsByOverlaps(). Returns a GRanges with the gene and transcript ids associated with the input .bed regions. Often it is worthwhile expanding the search window a bit, because not all .bed regions directly overlap with a transcription start site, so the 'window' parameter is provided to accomplish this.
-#' @param path The system path to a .bed file
-#' @param bedfile If the user has a .bed file already loaded in R, they can supply it here rather than re-importing it
+#' @param pathToBed The system path to a .bed file
+#' @param gRanges If the user has a .bed file already loaded in R, they can supply it here as a GRanges object rather than re-importing it
 #' @param db A TranscriptDb object containing the transcripts of the organism required
 #' @param window The window around a .bed region to search for genes, default 5kb
 #' @export
@@ -14,20 +14,29 @@
 #' txdb = TxDb.Mmusculus.UCSC.mm9.knownGene
 #' data(bed.sample)
 #' range = GRanges(seqnames=bed.sample$chr, IRanges(start=bed.sample$start, end=bed.sample$end))
-#' x = annotateBedFromDb(bedfile = range, db = txdb)
+#' x = annotateBedFromDb(gRanges = range, db = txdb)
 #' x
-annotateBedFromDb <- function(path = NULL, bedfile = NULL, db = NULL, window = 5000) {
-    if (!is.null(path) && !is.null(bedfile))
+annotateBedFromDb <- function(pathToBed = NULL, gRanges = NULL, db = NULL, window = 5000) {
+    if (!is.null(pathToBed) && !is.null(gRanges)) {
         stop("Both bed and path supplied, please use only one.")
-    if (is.null(path) && is.null(bedfile))
-        stop("Please supply either the path to a .bed file or the raw bedfile")
+    }
+    if (is.null(pathToBed) && is.null(gRanges)) {
+        stop("Please supply either the path to a .bed file or the raw gRanges")
+    }
 
-    if (is.null(bedfile))
-        bed = import.bed(path)
-    else
-        if(class(bedfile) == "GRanges")
-            bed = bedfile
-        else stop("bedfile must be a GRanges object")
+    if (is.null(db)) {
+        stop("A TranscriptDb object must be supplied for annotation. Please see documentation for an example")
+    }
+
+    if (is.null(gRanges)) {
+        bed = import.bed(pathToBed)
+    } else {
+        if(class(gRanges) == "GRanges") {
+            bed = gRanges
+        } else {
+            stop("gRanges must be a GRanges object")
+        }
+    }
 
     genes = transcriptsByOverlaps(ranges = bed, x = db, maxgap=window, columns=c('tx_id', 'gene_id'))
     return(genes)
@@ -36,10 +45,10 @@ annotateBedFromDb <- function(path = NULL, bedfile = NULL, db = NULL, window = 5
 #' @title Get the functional annotation table of a gene list using DAVID
 #' @description Uploads a gene list to DAVID, then does a GO enrichment analysis using the genome as the background. Requires registration with DAVID first. Returns a DAVIDFunctionalAnnotationChart object which can be easily coerced into a data.frame. DAVID does some automatic thresholding on results, we found it useful to get DAVID to return all possible annotations despite non-significant P-values and perform our own thresholding - especially with the introduction of the Z-score standardisation, which is able to show both over- and under-representation of GO terms in a gene set. DAVID will just return a P-value of 1 if something is under-represented.
 #' @export
-#' @param geneList A list of genes to upload and functionally enrich
+#' @param geneList Either a list of genes or a GRanges result from annotateBedFromDb to upload and functionally enrich
 #' @param david An RDAVIDWebService object can be passed to the function so a new one doesn't have to be requested each time
 #' @param email If david==NULL, an email must be supplied. DAVID requires (free) registration before users may interact with
-#'      their WebService API. This can be accomplished online, then the registered email supplied here.
+#'      their WebService API. This can be accomplished online (http://david.abcc.ncifcrf.gov/webservice/register.htm), then the registered email supplied here.
 #' @param idType The type of gene IDs being uploaded (MGI, Entrez,...)
 #' @param listName The name to give the list when it's uploaded to the WebService
 #' @param rawValues If true, no thresholding is performed on either P-values or GO term count by DAVID
@@ -47,6 +56,7 @@ annotateBedFromDb <- function(path = NULL, bedfile = NULL, db = NULL, window = 5
 #'      genome as a background
 #' @examples
 #' ## not run because registration is required
+#' ## visit http://david.abcc.ncifcrf.gov/webservice/register.htm to register
 #' \dontrun{
 #' fnAnot = getFnAnot_genome(exp1$gene_id,
 #'    email = "your.registered@@email.com",
@@ -55,29 +65,32 @@ annotateBedFromDb <- function(path = NULL, bedfile = NULL, db = NULL, window = 5
 #' fnAnot = getFnAnot_genome(entrezList, david = david)
 #' }
 getFnAnot_genome <- function(geneList, david = NULL, email = NULL, idType = "ENTREZ_GENE_ID", listName = "auto_list", rawValues = T) {
-    if (is.null(david) && !is.null(email))
+    if (is.null(david) && !is.null(email)) {
         david <- DAVIDWebService$new(email = email)
-
-    if(class(geneList) == "GRanges")
+    }
+    if(class(geneList) == "GRanges") {
         geneList = unique(unlist(as.character(geneList$gene_id)))
-
-    if(!RDAVIDWebService::is.connected(david))
+    }
+    if(!RDAVIDWebService::is.connected(david)) {
         connect(david)
+    }
     message("uploading...")
     addList(david, geneList, idType=idType, listType = "Gene", listName = listName)
     setAnnotationCategories(david, c("GOTERM_BP_ALL", "GOTERM_MF_ALL", "GOTERM_CC_ALL"))
 # to ensure genome-wide comparison
     setCurrentBackgroundPosition(david, 1)
-    if(rawValues)
+    if(rawValues) {
         fnAnot <- getFunctionalAnnotationChart(david, threshold=1, count=1L)
-    else
+    } else {
         fnAnot <- getFunctionalAnnotationChart(david)
+    }
     return(fnAnot)
 }
 
 subOntology <- function(set, ont) {
-    if(class(set) != "DAVIDFunctionalAnnotationChart")
+    if(class(set) != "DAVIDFunctionalAnnotationChart") {
         stop("Set must be of type DAVIDFunctionalAnnotationChart")
+    }
     set = subset(set, grepl(ont, set$Category) == TRUE)
     set = DAVIDFunctionalAnnotationChart(set)
     return(set)
@@ -109,31 +122,33 @@ zTransformDirectory <- function(inputDir, plot=T, cutoff=NULL, removeNA=F) {
 #initialise the table:
     z.merge <- matrix()
 #loop through the files of interest and put into a single list:
-    for(i in 1:length(file.list)){
+    for(i in 1:length(file.list)) {
         file.name = unlist(strsplit(file.list[i], "/"))
         file.name = file.name[length(file.name)]
         file.name = sub("(.bed)*-fnAnot.txt", "", file.name)
 #read table in
         table <- read.table(file.list[i])
-        if(i==1){
+        if(i==1) {
             z.merge <- doZtrans.single(table, file.name)
             names(z.merge)[ncol(z.merge)] = file.name
         }
-        if(i>1){
+        if(i>1) {
             z.merge.add <- doZtrans.single(table, file.name)
             z.merge <- merge(z.merge, z.merge.add, by="Term", all.x=TRUE, all.y = TRUE)
             names(z.merge)[ncol(z.merge)] = file.name
         }
     }
 #replace NA's with zeros (instances of no hits):
-    if(removeNA == TRUE)
+    if(removeNA == TRUE) {
         z.merge = z.merge[complete.cases(z.merge),]
-    else
+    } else {
         z.merge[is.na(z.merge)] <- 0
+    }
     z.merge = cbind(z.merge, Var = apply(abs(z.merge[2:ncol(z.merge)]), 1, var))
     z.merge = z.merge[order(-z.merge$Var), ]
-    if(!is.null(cutoff))
+    if(!is.null(cutoff)) {
         z.merge = z.merge[1:cutoff,]
+    }
 
 ##################################
 #hierarchical clustering ANALYSIS:
@@ -160,7 +175,10 @@ zTransformDirectory <- function(inputDir, plot=T, cutoff=NULL, removeNA=F) {
 #' \dontrun{
 #' fnAnot.zscore = doZtrans.single(fnAnot)
 #' }
-doZtrans.single <- function(x, name){
+doZtrans.single <- function(x, name) {
+    if(missing(name)) {
+        name = deparse(substitute(x))
+    }
 #Z-stats
     df = data.frame("Term" = x$Term)
     df <- cbind(df, "OR"= (x[,3]/x[,7])/(x[,8]/x[,9]))
@@ -195,10 +213,11 @@ doZtrans.merge <- function(setA, setB) {
 #' ksTest(fnAnot.1, fnAnot.2)
 #' }
 ksTest <- function(setA, setB, useRawPvals = FALSE, useZscores = FALSE) {
-    if(useZscores == T)
+    if(useZscores == T) {
         x = doZtrans.merge(setA, setB)
-    else
+    } else {
         x = extractPvalTable(setA, setB, useRawPvals)
+    }
 
     stats <- ks.test(x[,2], x[,3])
     D.stat <- round(stats$statistic[[1]], 3)
@@ -270,9 +289,11 @@ doJACCit <- function(x, it){#it = increment
 extractPvalTable <- function(setA, setB, useRawPvals) {
     if(all(c("Category", "X.", "PValue", "Benjamini") %in% names(setA))) {
         setA = extractGOFromAnnotation(setA)
-        if (useRawPvals)
+        if (useRawPvals) {
             setA_val = setA$PValue
-        else setA_val = setA$Benjamini
+        } else {
+            setA_val = setA$Benjamini
+        }
         names(setA_val) = setA$Term
     } else {
         stop("SetA needs to be of type DAVIDFunctionalAnnotationChart")
@@ -280,9 +301,11 @@ extractPvalTable <- function(setA, setB, useRawPvals) {
 
     if(all(c("Category", "X.", "PValue", "Benjamini") %in% names(setB))) {
         setB = extractGOFromAnnotation(setB)
-        if (useRawPvals)
+        if (useRawPvals) {
             setB_val = setB$PValue
-        else setB_val = setB$Benjamini
+        } else {
+            setB_val = setB$Benjamini
+        }
         names(setB_val) = setB$Term
     } else {
         stop("SetB needs to be of type DAVIDFunctionalAnnotationChart")
@@ -296,7 +319,7 @@ extractPvalTable <- function(setA, setB, useRawPvals) {
 }
 
 #' @title Performs z transform on two sets of GO terms and plots scatterplot of result
-#' @description Generates a scatterplot of z transformed GO terms and plots the result, which is normalised for set size, along with the Jaccard metric for each GO term and linear fit+correlation
+#' @description Generates a scatterplot of z transformed GO terms and plots the result, which is normalised for set size, along with the Jaccard metric for each GO term and linear fit + correlation. More statistically sound version of the plotPairwise function, which examines the P-values of the two sets directly. 
 #' @export
 #' @param setA DAVIDFunctionalAnnotationChart object to compare
 #' @param setB DAVIDFunctionalAnnotationChart object to compare
@@ -313,10 +336,12 @@ plotZScores <- function(setA, setB, cutoff = NULL, plotNA = F, model='lm') {
     if (all(c("Category", "X.", "PValue", "Benjamini") %in% names(setA))) {
         #zAll = doZtrans.single(setA, "SetA")
         #names(zAll)[ncol(zAll)] = "SetA"
-        if(is.factor(setA$Term))
+        if(is.factor(setA$Term)) {
             setA$Term = as.vector(setA$Term)
-        if(is.factor(setA$Genes))
+        }
+        if(is.factor(setA$Genes)) {
             setA$Genes = as.vector(setA$Genes)
+        }
     } else {
         stop("SetA needs to be of type DAVIDFunctionalAnnotationChart")
     }
@@ -325,10 +350,12 @@ plotZScores <- function(setA, setB, cutoff = NULL, plotNA = F, model='lm') {
         #zB   = doZtrans.single(setB, "SetB")
         #zAll = merge(zAll, zB, by = "Term", all.x = T, all.y = T)
         #names(zAll)[ncol(zAll)] = "SetB"
-        if(is.factor(setB$Term))
+        if(is.factor(setB$Term)) {
             setB$Term = as.vector(setB$Term)
-        if(is.factor(setB$Genes))
+        }
+        if(is.factor(setB$Genes)) {
             setB$Genes = as.vector(setB$Genes)
+        }
     } else {
         stop("SetB needs to be of type DAVIDFunctionalAnnotationChart")
     }
@@ -340,10 +367,11 @@ plotZScores <- function(setA, setB, cutoff = NULL, plotNA = F, model='lm') {
 
     zAll = doZtrans.merge(setA, setB)
 
-    if(plotNA == T)
+    if(plotNA == T) {
         zAll[is.na(zAll)] <- 0
-    else
+    } else {
         zAll = zAll[complete.cases(zAll),]
+    }
 
     goList = list()
     for(i in 1:nrow(zAll)) {
@@ -382,7 +410,7 @@ plotZScores <- function(setA, setB, cutoff = NULL, plotNA = F, model='lm') {
 }
 
 #' @title Generates a scatterplot of two sets of GO terms
-#' @description Generates a -log10 scatterplot of two sets of GO terms by p-value or corrected p-value with linear fit and correlation
+#' @description Generates a -log10 scatterplot of two sets of GO terms by p-value or corrected p-value with linear fit and correlation. Also includes a Jaccard metric for gene overlap within each GO term. Useful as an overall metric of gene list similarity. NOTE: The plotZScores function is more statistically sound, you should use that instead of this.
 #' @export
 #' @param setA DAVIDFunctionalAnnotationChart object to compare
 #' @param setB DAVIDFunctionalAnnotationChart object to compare
@@ -409,13 +437,15 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
     #require('RDAVIDWebService')
     if (all(c("Category", "X.", "PValue", "Benjamini") %in% names(setA))) {
         #setA = extractGOFromAnnotation(setA)
-        if (useRawPvals)
+        if (useRawPvals) {
             setA_val = setA$PValue
-        else
+        } else {
             setA_val = setA$Benjamini
+        }
 
-        if(is.factor(setA$Genes))
+        if(is.factor(setA$Genes)) {
             setA$Genes = as.vector(setA$Genes)
+        }
 
         names(setA_val) = setA$Term
     } else {
@@ -423,13 +453,15 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
     }
     if (all(c("Category", "X.", "PValue", "Benjamini") %in% names(setB))) {
         #setB = extractGOFromAnnotation(setB)
-        if (useRawPvals)
+        if (useRawPvals) {
             setB_val = setB$PValue
-        else
+        } else {
             setB_val = setB$Benjamini
+        }
 
-        if(is.factor(setB$Genes))
+        if(is.factor(setB$Genes)) {
             setB$Genes = as.vector(setB$Genes)
+        }
 
         names(setB_val) = setB$Term
     } else {
@@ -503,7 +535,7 @@ extractGOFromAnnotation <- function(fnAnot) {
 }
 
 #' @title Plots a directed acyclic graph of GO terms from two different sources
-#' @description Plots a directed acyclic graph of GO terms from two different sources, using colour to show intersection and difference
+#' @description Plots a directed acyclic graph of GO terms from two different sources, using colour to show intersection and difference. This is useful to see the specific functional differences between gene lists, instead of getting an overall metric of gene list similarity
 #' @param setA A DAVIDFunctionalAnnotationChart object
 #' @param setB A DAVIDFunctionalAnnotationChart object
 #' @param ont The ontology to use, one of BP, MF and CC
@@ -559,8 +591,9 @@ plotTwoGODags <- function (setA, setB, ont = "BP", cutoff = 0.1, maxLabel = NULL
     }
 
 # Subset term length if supplied
-    if(!is.null(maxLabel))
+    if(!is.null(maxLabel)) {
         nodeLabels = sapply(nodeLabels, substr, 1L, maxLabel, USE.NAMES=F)
+    }
 
     setU$Term = sub("~.*","",setU$Term)
 
@@ -638,8 +671,9 @@ plotRankedZDAG <- function (setA, setB, ont = "BP", n = 100, maxLabel = NULL, fu
     }
 
 # Subset term length if supplied
-    if(!is.null(maxLabel))
+    if(!is.null(maxLabel)) {
         nodeLabels = sapply(nodeLabels, substr, 1L, maxLabel, USE.NAMES=F)
+    }
 
     setU$Term = sub("~.*","",setU$Term)
 

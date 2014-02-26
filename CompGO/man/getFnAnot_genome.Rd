@@ -6,8 +6,9 @@ getFnAnot_genome(geneList, david = NULL, email = NULL,
   idType = "ENTREZ_GENE_ID", listName = "auto_list", rawValues = T)
 }
 \arguments{
-  \item{geneList}{A list of genes to upload and
-  functionally enrich}
+  \item{geneList}{Either a list of genes or a GRanges
+  result from annotateBedFromDb to upload and functionally
+  enrich}
 
   \item{david}{An RDAVIDWebService object can be passed to
   the function so a new one doesn't have to be requested
@@ -16,8 +17,9 @@ getFnAnot_genome(geneList, david = NULL, email = NULL,
   \item{email}{If david==NULL, an email must be supplied.
   DAVID requires (free) registration before users may
   interact with their WebService API. This can be
-  accomplished online, then the registered email supplied
-  here.}
+  accomplished online
+  (http://david.abcc.ncifcrf.gov/webservice/register.htm),
+  then the registered email supplied here.}
 
   \item{idType}{The type of gene IDs being uploaded (MGI,
   Entrez,...)}
@@ -49,6 +51,7 @@ if something is under-represented.
 }
 \examples{
 ## not run because registration is required
+## visit http://david.abcc.ncifcrf.gov/webservice/register.htm to register
 \dontrun{
 fnAnot = getFnAnot_genome(exp1$gene_id,
    email = "your.registered@email.com",

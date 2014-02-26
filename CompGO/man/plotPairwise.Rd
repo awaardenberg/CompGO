@@ -31,7 +31,11 @@ plotPairwise(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA = T,
 \description{
 Generates a -log10 scatterplot of two sets of GO terms by
 p-value or corrected p-value with linear fit and
-correlation
+correlation. Also includes a Jaccard metric for gene
+overlap within each GO term. Useful as an overall metric of
+gene list similarity. NOTE: The plotZScores function is
+more statistically sound, you should use that instead of
+this.
 }
 \examples{
 \dontrun{

@@ -29,7 +29,7 @@ sample.range = GRanges(seqnames=bed.sample$chr,
     IRanges(start=bed.sample$start, end=bed.sample$end))
 # Note that the window around the .bed region beyond which
 # genes are cutoff is 5kb, this is modifiable
-sample.annotated = annotateBedFromDb(bedfile = sample.range,
+sample.annotated = annotateBedFromDb(gRanges = sample.range,
     db = TxDb.Mmusculus.UCSC.mm9.knownGene)
 head(sample.annotated)
 @

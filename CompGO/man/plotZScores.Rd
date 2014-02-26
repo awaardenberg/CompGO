@@ -22,8 +22,10 @@ plotZScores(setA, setB, cutoff = NULL, plotNA = F, model = "lm")
 \description{
 Generates a scatterplot of z transformed GO terms and plots
 the result, which is normalised for set size, along with
-the Jaccard metric for each GO term and linear
-fit+correlation
+the Jaccard metric for each GO term and linear fit +
+correlation. More statistically sound version of the
+plotPairwise function, which examines the P-values of the
+two sets directly.
 }
 \examples{
 \dontrun{

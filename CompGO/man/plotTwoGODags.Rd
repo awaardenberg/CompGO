@@ -25,7 +25,9 @@ plotTwoGODags(setA, setB, ont = "BP", cutoff = 0.1, maxLabel = NULL,
 \description{
 Plots a directed acyclic graph of GO terms from two
 different sources, using colour to show intersection and
-difference
+difference. This is useful to see the specific functional
+differences between gene lists, instead of getting an
+overall metric of gene list similarity
 }
 \examples{
 \dontrun{

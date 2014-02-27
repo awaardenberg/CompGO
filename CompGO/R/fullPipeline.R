@@ -1,11 +1,11 @@
-# R pipeline for GO analysis and gene annotation
+# R pipeline for GO analysis and comparison
 # by Sam Bassett and Ash Waardenberg, VCCRI, 2014
 
-#' @title Annotate .bed file with closest genes
-#' @description Wrapper for transcriptsByOverlaps(). Returns a GRanges with the gene and transcript ids associated with the input .bed regions. Often it is worthwhile expanding the search window a bit, because not all .bed regions directly overlap with a transcription start site, so the 'window' parameter is provided to accomplish this.
-#' @param pathToBed The system path to a .bed file
+#' @title Annotate .bed file to genes
+#' @description Wrapper for transcriptsByOverlaps(). Returns a GRanges with the gene and transcript ids associated with the input .bed regions. Sometimes it is necessary to expand the search window a bit, because not all .bed regions directly overlap with a transcription start site, so the 'window' parameter is provided to accomplish this.
+#' @param pathToBed The system path to a .bed file (directory + file name)
 #' @param gRanges If the user has a .bed file already loaded in R, they can supply it here as a GRanges object rather than re-importing it
-#' @param db A TranscriptDb object containing the transcripts of the organism required
+#' @param db A TranscriptDb object containing the transcripts of the organism (required)
 #' @param window The window around a .bed region to search for genes, default 5kb
 #' @export
 #' @return A GRanges object with corresponding EntrezGene IDs in gene_id column, plus transcript IDs in tx_id
@@ -16,6 +16,11 @@
 #' range = GRanges(seqnames=bed.sample$chr, IRanges(start=bed.sample$start, end=bed.sample$end))
 #' x = annotateBedFromDb(gRanges = range, db = txdb)
 #' x
+#' ## Alternative is to supply a system path directly to the .bed file:
+#' \dontrun{
+#' x = annotateBedFromDb(pathToBed = "~/data/experiment.bed", db = txdb)
+#' x
+#' }
 annotateBedFromDb <- function(pathToBed = NULL, gRanges = NULL, db = NULL, window = 5000) {
     if (!is.null(pathToBed) && !is.null(gRanges)) {
         stop("Both bed and path supplied, please use only one.")
@@ -42,29 +47,35 @@ annotateBedFromDb <- function(pathToBed = NULL, gRanges = NULL, db = NULL, windo
     return(genes)
 }
 
-#' @title Get the functional annotation table of a gene list using DAVID
-#' @description Uploads a gene list to DAVID, then does a GO enrichment analysis using the genome as the background. Requires registration with DAVID first. Returns a DAVIDFunctionalAnnotationChart object which can be easily coerced into a data.frame. DAVID does some automatic thresholding on results, we found it useful to get DAVID to return all possible annotations despite non-significant P-values and perform our own thresholding - especially with the introduction of the Z-score standardisation, which is able to show both over- and under-representation of GO terms in a gene set. DAVID will just return a P-value of 1 if something is under-represented.
+#' @title Get the functional annotation chart of a gene list using DAVID
+#' @description Uploads a gene list to DAVID, then performs a GO enrichment analysis. Requires registration with DAVID first at \href{http://david.abcc.ncifcrf.gov/webservice/register.htm} . Returns a DAVIDFunctionalAnnotationChart object which can be easily coerced into a data.frame. DAVID does some automatic thresholding on results. For Z-score standardisation, we found it useful to get DAVID to return all possible annotations despite non-significant P-values and perform our own thresholding.
 #' @export
 #' @param geneList Either a list of genes or a GRanges result from annotateBedFromDb to upload and functionally enrich
 #' @param david An RDAVIDWebService object can be passed to the function so a new one doesn't have to be requested each time
 #' @param email If david==NULL, an email must be supplied. DAVID requires (free) registration before users may interact with
-#'      their WebService API. This can be accomplished online (http://david.abcc.ncifcrf.gov/webservice/register.htm), then the registered email supplied here.
+#'      their WebService API. This can be accomplished online (\href{http://david.abcc.ncifcrf.gov/webservice/register.htm}), then the registered email supplied here.
 #' @param idType The type of gene IDs being uploaded (MGI, Entrez,...)
 #' @param listName The name to give the list when it's uploaded to the WebService
-#' @param rawValues If true, no thresholding is performed on either P-values or GO term count by DAVID
+#' @param count Minimum number of genes per GO term
+#' @param PVal P-value threshold for GO terms
+#' @param background If you want to perform enrichment against a specific background instead DAVID's default (whole genome), supply it here
+#' @param bgIdType If the background gene ID type is different from the gene list, enter it here
+#' @param bgListName If you want to give the background a name, enter it here
 #' @return Returns a DAVIDFunctionalAnnotationChart after generating it by comparing the supplied gene list to the full
 #'      genome as a background
 #' @examples
 #' ## not run because registration is required
 #' ## visit http://david.abcc.ncifcrf.gov/webservice/register.htm to register
 #' \dontrun{
+#' ## You can either supply the registered email:
 #' fnAnot = getFnAnot_genome(exp1$gene_id,
 #'    email = "your.registered@@email.com",
 #'    idType="ENTREZ_GENE_ID", listName="My_gene_list-1")
+#' ## Or create a DAVIDWebService object with the email:
 #' david = DAVIDWebService$new(email = "your.registered@@email.com")
 #' fnAnot = getFnAnot_genome(entrezList, david = david)
 #' }
-getFnAnot_genome <- function(geneList, david = NULL, email = NULL, idType = "ENTREZ_GENE_ID", listName = "auto_list", rawValues = T) {
+getFnAnot_genome <- function(geneList, david = NULL, email = NULL, idType = "ENTREZ_GENE_ID", listName = "auto_list", count = 1L, PVal = 1, background = NULL, bgIdType = NULL, bgListName = NULL) {
     if (is.null(david) && !is.null(email)) {
         david <- DAVIDWebService$new(email = email)
     }
@@ -74,16 +85,18 @@ getFnAnot_genome <- function(geneList, david = NULL, email = NULL, idType = "ENT
     if(!RDAVIDWebService::is.connected(david)) {
         connect(david)
     }
-    message("uploading...")
+    message("uploading gene list...")
     addList(david, geneList, idType=idType, listType = "Gene", listName = listName)
     setAnnotationCategories(david, c("GOTERM_BP_ALL", "GOTERM_MF_ALL", "GOTERM_CC_ALL"))
+    if (is.null(background)) {
 # to ensure genome-wide comparison
-    setCurrentBackgroundPosition(david, 1)
-    if(rawValues) {
-        fnAnot <- getFunctionalAnnotationChart(david, threshold=1, count=1L)
+        setCurrentBackgroundPosition(david, 1)
     } else {
-        fnAnot <- getFunctionalAnnotationChart(david)
+        message("uploading background...")
+        addList(david, background, idType = ifelse(is.null(bgIdType), idType, bgIdType), listName = ifelse(is.null(bgListName), "auto_bg", bgListName), listType = "Background")
     }
+    
+    fnAnot <- getFunctionalAnnotationChart(david, threshold=PVal, count=count)
     return(fnAnot)
 }
 
@@ -104,28 +117,31 @@ subOntology <- function(set, ont) {
 #   of OR comparisons...
 ###########################################
 
-#' @title Z-score transformation of Odds Ratios in files in a directory
-#' @description Given a directory of functional annotation charts, this function iterates over them and generates Odds Ratio, St. Error and Z scores. This is useful for batch processing, as all the charts can be written to disk somewhere then iterated over by this function automatically. It can also generate a cluster dendrogram based on the relative Z scores for each GO term. This brings up an interesting issue, namely, what should be done with GO terms that are not present in all lists? We provide two options: either the NAs are set as 0, or the incomplete rows are removed.
+#' @title Z-score transformation of DAVID functional annotation charts in a supplied directory
+#' @description Given a directory of functional annotation charts, this function iterates over them and generates Odds Ratio, St. Error and Z scores. This is useful for batch processing, as all the charts can be written to disk somewhere then iterated over by this function automatically. Two options are provided for dealing with absent terms: either the NAs are set as 0 (a pseudo-representation of a Z-score with no enrichment), or incomplete rows are removed. The final table can be used for clustering analyses.
 #' @param inputDir The directory to search for functional annotation charts
-#' @param plot Whether to plot a dendrogram for visual comparison or not
+#' @param pattern The regex pattern to match files in inputDir
 #' @param cutoff Reduce the computation to the top n GO terms ranked by variance
-#' @param removeNA True to only generate the dendrogram based on GO terms common to all input enrichment analyses, False to set all NAs as 0
+#' @param removeNA True to only generate the Z-transform table based on GO terms common to all input enrichment analyses, False to set all NAs as 0
 #' @return Returns a data.frame of z scores, ORs and SEs
 #' @export
 #' @examples
 #' \dontrun{
 #' #not run as dir required
-#' zTransformDirectory('../')
+#' z.merge = zTransformDirectory("./fnAnot_charts", pattern = "-fnAnot.txt")
+#' # To plot a dendrogram based on Z-scores:
+#' d <- cor(abs(z.merge[2:(ncol(z.merge)-1)]))
+#' dist.cor <- hclust(dist(1-d), method="complete")
+#' plot(dist.cor, xlab="Complete linkage", sub = NA)
 #' }
-zTransformDirectory <- function(inputDir, plot=T, cutoff=NULL, removeNA=F) {
-    file.list <- list.files(inputDir, pattern = "fnAnot.txt", full.names = TRUE)
+zTransformDirectory <- function(inputDir, cutoff=NULL, pattern = NULL, removeNA=F) {
+    file.list <- list.files(inputDir, pattern = pattern, full.names = TRUE)
 #initialise the table:
     z.merge <- matrix()
 #loop through the files of interest and put into a single list:
     for(i in 1:length(file.list)) {
         file.name = unlist(strsplit(file.list[i], "/"))
         file.name = file.name[length(file.name)]
-        file.name = sub("(.bed)*-fnAnot.txt", "", file.name)
 #read table in
         table <- read.table(file.list[i])
         if(i==1) {
@@ -150,25 +166,15 @@ zTransformDirectory <- function(inputDir, plot=T, cutoff=NULL, removeNA=F) {
         z.merge = z.merge[1:cutoff,]
     }
 
-##################################
-#hierarchical clustering ANALYSIS:
-##################################
-    if(plot) {
-        d <- cor(abs(z.merge[2:(ncol(z.merge)-1)]))
-        dist.cor <- hclust(dist(1-d), method="complete")
-        plot(dist.cor, xlab="Complete linkage", sub = NA)
-    }
     return(z.merge)
 }
 
-##############################
-## FUNCTIONS:::
-##############################
+# TODO: return.full : substitute DAVID p-value for z-score derived p-value.
 
-#' @title Perform Z transform to single fnAnot table
-#' @description Decomposes each GO term in an fnAnot table to its Z-score these tables can be merged to produce a dendrogram or similar
-#' @param x The fnAnot chart to apply the transformation to
-#' @param name The name to give the Z-score column
+#' @title Z transform a single functional annotation chart from DAVID
+#' @description Decomposes each GO term in a functional annotation chart (returned from getFnAnot_genome()) to its Z-score. These tables can be merged for clustering
+#' @param x The functional annotation chart to apply the transformation to
+#' @param name (optional) The name to give the Z-score column; if not supplied, name is derived from the input variable
 #' @return A data.frame of GO terms and Z-scores
 #' @export
 #' @examples
@@ -199,6 +205,12 @@ doZtrans.merge <- function(setA, setB) {
     names(z.merge) = c("Term", "SetA", "SetB")
     return(z.merge)
 }
+
+############################################
+## UNSURE OF K-S TEST VALIDITY FOR COMPARING
+## VALUES DRAWN FROM SAME DISTRIBUTION, 
+## NOT INCLUDED IN PACKAGE FOR NOW
+############################################
 
 #' @title Plot ECDFs of two functional annotation charts and include K-S statistics of distribution similarity
 #' @description Uses a two-sample Kolmogorov-Smirnov test on the supplied fnAnot charts to test whether the underlying distributions of their P-values differ. Can be used as a metric for similarity between test sets.
@@ -235,11 +247,10 @@ ksTest <- function(setA, setB, useRawPvals = FALSE, useZscores = FALSE) {
 }
 
 #' @title Plot two functional annotation charts using a sliding Jaccard coefficient
-#' @description This function compares two functional annotation charts using a sliding Jaccard coefficient - a ranked list of P-values is produced, and a sliding window is used to find out the Jaccard coefficient of the two charts at different cutoffs of the top n terms. This is useful to determine where the majority of overlapping terms is located, and can also be used to compare Jaccard profiles between sets if sets C and D are supplied.
+#' @description This function compares two functional annotation charts using a sliding Jaccard coefficient - a ranked list of P-values is produced, and a sliding window is used to find the Jaccard coefficient of two charts at different cutoffs of the top n terms. This is useful to determine where the majority of overlapping terms is located, and can also be used to compare Jaccard profiles between multiple (up to 4) sets if C and D are supplied.
 #' @param setA A DAVIDFunctionalAnnotationChart to compare
 #' @param setB A DAVIDFunctionalAnnotationChart to compare
-#' @param increment The increment to use for each sliding window
-#' @param useRawPvals Use raw P-values instead of Benjamini-corrected
+#' @param increment The number of terms (n) to increment for each sliding window
 #' @param setC A DAVIDFunctionalAnnotationChart to compare, optional
 #' @param setD A DAVIDFunctionalAnnotationChart to compare, optional
 #' @export
@@ -249,8 +260,8 @@ ksTest <- function(setA, setB, useRawPvals = FALSE, useZscores = FALSE) {
 #' setB = getFnAnot_genome(entrezList2, email = "email")
 #' slidingJaccard(setA, setB, 50, FALSE)
 #' }
-slidingJaccard <- function(setA, setB, increment = 50, useRawPvals = FALSE, setC = NULL, setD = NULL) {
-    pvals = extractPvalTable(setA, setB, useRawPvals)
+slidingJaccard <- function(setA, setB, increment = 50, setC = NULL, setD = NULL) {
+    pvals = extractPvalTable(setA, setB, useRawPvals = FALSE)
     result = doJACCit(pvals, increment)
     p = plot(result, type="l", col="red", main="", xlab="top n terms",
         ylab="Jaccard coefficient", ylim=c(0, 1))
@@ -319,13 +330,13 @@ extractPvalTable <- function(setA, setB, useRawPvals) {
 }
 
 #' @title Performs z transform on two sets of GO terms and plots scatterplot of result
-#' @description Generates a scatterplot of z transformed GO terms and plots the result, which is normalised for set size, along with the Jaccard metric for each GO term and linear fit + correlation. More statistically sound version of the plotPairwise function, which examines the P-values of the two sets directly. 
+#' @description Generates a scatterplot of z transformed GO terms and plots the result along with the Jaccard metric for each GO term and linear fit + correlation.
 #' @export
 #' @param setA DAVIDFunctionalAnnotationChart object to compare
 #' @param setB DAVIDFunctionalAnnotationChart object to compare
-#' @param plotNA Whether to plot NAs or set them to 0
+#' @param plotNA Whether to remove NAs entirely or set all NAs to 0
 #' @param model The model to use when plotting linear fit, default 'lm'
-#' @param cutoff If you want to apply a cutoff to each list before generating Z scores, supply it here
+#' @param cutoff If you want to apply a Benjamini corrected P-value cutoff to each list before generating Z scores, supply it here
 #' @examples
 #' \dontrun{
 #' # This is not run because it requires the entire pathway
@@ -404,12 +415,12 @@ plotZScores <- function(setA, setB, cutoff = NULL, plotNA = F, model='lm') {
         axis.line=element_line(), axis.title=element_text(size=6, face="bold"), legend.text=element_text(size=6), legend.title=element_text(size=6))
     p = p + scale_colour_gradient2(expression(over(abs(paste("A", intersect(), "B")), abs(paste("A", union(), "B")))),
         low="red", mid="red", high="blue", limits=c(0, 1))
-    p = p + annotate("text", label = paste("R=", corr), x = Inf, hjust = 1, y = Inf, vjust = 5, size = 5, colour = "black")
+    p = p + annotate("text", label = paste("R =", corr), x = Inf, hjust = 1, y = Inf, vjust = 5, size = 5, colour = "black")
     p = p + geom_smooth(method=model)
     return(p)
 }
 
-#' @title Generates a scatterplot of two sets of GO terms
+#' @title Generates a scatterplot of two sets of GO terms based on DAVID P-values
 #' @description Generates a -log10 scatterplot of two sets of GO terms by p-value or corrected p-value with linear fit and correlation. Also includes a Jaccard metric for gene overlap within each GO term. Useful as an overall metric of gene list similarity. NOTE: The plotZScores function is more statistically sound, you should use that instead of this.
 #' @export
 #' @param setA DAVIDFunctionalAnnotationChart object to compare
@@ -482,15 +493,6 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
         comp = subset(comp, (setA_val < cutoff | setB_val < cutoff))
     }
 
-    go_setA = names(setA_val)
-    go_setB = names(setB_val)
-
-    goTerms_U = union(go_setA, go_setB)
-    goTerms_N = intersect(go_setA, go_setB)
-
-    totJaccard= length(goTerms_N)/length(goTerms_U)
-    totJaccard= format(round(totJaccard, 4), nsmall=4)
-
     geneA = setA$Genes
     names(geneA) = setA$Term
     geneB = setB$Genes
@@ -498,6 +500,11 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
 
     geneA = strsplit(geneA, ', ')
     geneB = strsplit(geneB, ', ')
+
+    nAllGenes = intersect(unique(unlist(geneA)), unique(unlist(geneB)))
+    uAllGenes = union(unique(unlist(geneA)), unique(unlist(geneB)))
+    totJaccard= length(nAllGenes)/length(uAllGenes)
+    totJaccard= format(round(totJaccard, 4), nsmall=4)
 
 # Either get the union or intersection of GO terms depending on whether NAs are to be plotted
     if (plotNA == F) {
@@ -523,7 +530,7 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
         axis.line=element_line(), axis.title=element_text(size=6, face="bold"), legend.text=element_text(size=6), legend.title=element_text(size=6))
     p = p + scale_colour_gradient2(expression(over(abs(paste("A", intersect(), "B")), abs(paste("A", union(), "B")))),
         low="red", mid="red", high="blue", limits=c(0, 1))
-    p = p + annotate("text", label = paste("R=", corr, "Jc=", totJaccard), x = Inf, hjust = 1, y = Inf, vjust = 5, size = 5, colour = "black")
+    p = p + annotate("text", label = paste("R =", corr, "\nJc=", totJaccard), x = Inf, hjust = 1, y = Inf, vjust = 5, size = 5, colour = "black")
     p = p + geom_smooth(method=model)
     return(p)
 }
@@ -537,7 +544,7 @@ extractGOFromAnnotation <- function(fnAnot) {
 }
 
 #' @title Plots a directed acyclic graph of GO terms from two different sources
-#' @description Plots a directed acyclic graph of GO terms from two different sources, using colour to show intersection and difference. This is useful to see the specific functional differences between gene lists, instead of getting an overall metric of gene list similarity
+#' @description Plots a directed acyclic graph of GO terms from two different sources, using colour to show intersection and difference. This is useful to see the specific functional differences between gene lists, complementing the overall metric of gene list similarity
 #' @param setA A DAVIDFunctionalAnnotationChart object
 #' @param setB A DAVIDFunctionalAnnotationChart object
 #' @param ont The ontology to use, one of BP, MF and CC

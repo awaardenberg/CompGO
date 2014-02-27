@@ -373,26 +373,28 @@ plotZScores <- function(setA, setB, cutoff = NULL, plotNA = F, model='lm') {
         zAll = zAll[complete.cases(zAll),]
     }
 
-    goList = list()
-    for(i in 1:nrow(zAll)) {
-        geneA = subset(setA, Term == zAll[i,1])$Genes
-        geneB = subset(setB, Term == zAll[i,1])$Genes
-        term  = zAll[i,1]
-        geneA = strsplit(geneA, ', ')
-        geneB = strsplit(geneB, ', ')
-        if(length(geneA) == 0  | length(geneB) == 0) {
-            zAll[i,"jaccard"] = 0
-            next
-        }
+    geneA = setA$Genes
+    names(geneA) = setA$Term
+    geneB = setB$Genes
+    names(geneB) = setB$Term
 
-        names(geneA) = "a"
-        names(geneB) = "b"
-        geneA = as.vector(geneA$a)
-        geneB = as.vector(geneB$b)
-        n = intersect(geneA, geneB)
-        u = union(geneA, geneB)
-        zAll[i, "jaccard"] = length(n)/length(u)
+    geneA = strsplit(geneA, ', ')
+    geneB = strsplit(geneB, ', ')
+
+# Either get the union or intersection of GO terms depending on whether NAs are to be plotted
+    if (plotNA == F) {
+        keys = unique(intersect(names(geneA), names(geneB)))
+    } else {
+        keys = unique(c(names(geneA), names(geneB)))
     }
+# Using GO terms as keys, get the union and intersection of genes from sets A and B
+    n = setNames(mapply(intersect, geneA[keys], geneB[keys]), keys)
+    u = setNames(mapply(union, geneA[keys], geneB[keys]), keys)
+
+# Calculate jaccards from intersection/union
+    jaccards = mapply(function(x, y) {length(x)/length(y)}, n, u)
+    jaccards = data.frame("Term" = names(jaccards), "jaccard" = jaccards)
+    zAll = merge(zAll, jaccards, by = "Term")
 
     corr = cor(zAll$SetA, zAll$SetB)
     corr = format(round(corr, 4), nsmall=4)
@@ -489,26 +491,28 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
     totJaccard= length(goTerms_N)/length(goTerms_U)
     totJaccard= format(round(totJaccard, 4), nsmall=4)
 
-    goList = list()
-    for(i in 1:nrow(comp)) {
-        geneA = subset(setA, Term == comp[i,1])$Genes
-        geneB = subset(setB, Term == comp[i,1])$Genes
-        goTerm= comp[i,]$V1
-        geneA = strsplit(geneA, ', ')
-        geneB = strsplit(geneB, ', ')
-        if(length(geneA) == 0 | length(geneB) == 0) {
-            comp[i,"jaccard"] = 0
-            next
-        }
-# needed for list->vector
-        names(geneA) = "a"
-        names(geneB) = "b"
-        geneA = as.vector(geneA$a)
-        geneB = as.vector(geneB$b)
-        n = intersect(geneA, geneB)
-        u = union(geneA, geneB)
-        comp[i, "jaccard"] = length(n)/length(u)
+    geneA = setA$Genes
+    names(geneA) = setA$Term
+    geneB = setB$Genes
+    names(geneB) = setB$Term
+
+    geneA = strsplit(geneA, ', ')
+    geneB = strsplit(geneB, ', ')
+
+# Either get the union or intersection of GO terms depending on whether NAs are to be plotted
+    if (plotNA == F) {
+        keys = unique(intersect(names(geneA), names(geneB)))
+    } else {
+        keys = unique(c(names(geneA), names(geneB)))
     }
+# Using GO terms as keys, get the union and intersection of genes from sets A and B
+    n = setNames(mapply(intersect, geneA[keys], geneB[keys]), keys)
+    u = setNames(mapply(union, geneA[keys], geneB[keys]), keys)
+
+# Calculate jaccards from intersection/union
+    jaccards = mapply(function(x, y) {length(x)/length(y)}, n, u)
+    jaccards = data.frame("Term" = names(jaccards), "jaccard" = jaccards)
+    comp = merge(comp, jaccards, by = "Term")
 
     corr = cor(-log10(comp$setA_val), -log10(comp$setB_val))
     corr = format(round(corr, 4), nsmall=4)

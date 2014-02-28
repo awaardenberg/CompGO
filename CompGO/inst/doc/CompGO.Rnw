@@ -15,11 +15,24 @@
 \maketitle
 %\VignetteIndexEntry{Introduction}
 \section{Introduction}
-This package contains functions to accomplish several tasks relating to gene ontology enrichment comparison and visualisation. It interfaces with rtracklayer and VariantAnnotation to easily annotate .bed files with genes, and with RDAVIDWebService to generate functional annotation charts based on these gene lists. From here, we provide several methods for visualisation, including viewing the GO term hierarchy in two samples using a directed acyclic graph (DAG), performing a z-score standardisation on the GO terms returned from DAVID, comparing these directly using a pairwise scatterplot with linear fit and Jaccard metric and clustering multiple inputs into a dendrogram.\\
+This package contains functions to accomplish several tasks relating to gene ontology enrichment comparison and visualisation given either .bed files or gene lists. It interfaces with rtracklayer and VariantAnnotation to easily annotate .bed files with genes, and with RDAVIDWebService to generate functional annotation charts based on these gene lists. From here, we provide several methods for comparative visualisation, including viewing the GO term hierarchy in two samples using a directed acyclic graph (DAG), performing z-score standardisation (approximately normal using a log odds-ratio (OR) - Equation 1 and 2) of GO terms returned from DAVID and comparing enrichment via pairwise scatterplots with linear fit and Jaccard metrics (Equation 3). We also provide functions to enable large-scale clustering.\\
+
+\begin{equation}
+Z \sim N(log(OR), \sigma^{2})
+\end{equation}
+
+\begin{equation}
+z_{i} = \frac{log(OR)}{SE(OR)}
+\end{equation}
+
+\begin{equation}
+J_{c} = \frac{A \cap B }{A \cup B}
+\end{equation}
+
 
 \section{Annotating .bed files}
 
-The first step in this analysis pipeline is generating the individual Gene Ontology data for each dataset. We provide an interface to generate a list of genes from input .bed coordinates with the function anotateBedFromDb, which can take either a system path or a GRanges object as input:
+The first step in this analysis pipeline is to generate individual Gene Ontology data for each dataset. We provide an interface to generate a list of genes from input .bed coordinates with the function anotateBedFromDb, which can take either a system path or a GRanges object as input:
 <<>>=
 library(CompGO)
 library(TxDb.Mmusculus.UCSC.mm9.knownGene)
@@ -35,12 +48,12 @@ head(sample.annotated)
 @
 
 \section{Generation of Gene Ontology data}
-Once we have this annotated GRanges object, we can use the list of genes contained within to query DAVID and return the full functional annotation chart. Note that there are several parameters available for tweaking here, especially rawValues - this parameter tells DAVID to do no thresholding of results whatsoever, giving the user of this package the power to perform their own thresholding. Since DAVID requires registration before the use of their Web Service R package, you should register first then substitute the placeholder email for your own.
+Once we have this annotated GRanges object, we can derive a list of genes to query DAVID and retrieve a full functional annotation chart. Alternatively, a list of genes can be directly supplied to DAVID. Note that there are several parameters available for tweaking the results returned from DAVID. Users can specify PVal and count; however, by default, no thresholding is performed. Since DAVID requires registration before the use of their Web Service R package, you should register first then substitute the placeholder email for your own.
 <<>>=
 # fnAnot = getFnAnot_genome(sample.annotated$gene_id,
 #    email = "PLaceholder@inst.edu", listName="sample")
-# We instead use examples from the RDAVIDWebService package,
-# but without KEGG data:
+# We instead use examples taken from the RDAVIDWebService package
+# to illustrate the utility of this package:
 data(funChart1)
 data(funChart2)
 funChart1 = subset(funChart1, Category %in%
@@ -48,30 +61,33 @@ funChart1 = subset(funChart1, Category %in%
 funChart2 = subset(funChart2, Category %in%
     c("GOTERM_BP_ALL", "GOTERM_MF_ALL", "GOTERM_CC_ALL"))
 str(funChart1)
+# once the charts have been retrieved, they can be written
+# to disk for subsequent batch processing like so:
+# write.table(funChart1, "./path/to/text.txt")
 @
 
 \section{Analysis and comparison}
 
-Now that you have several functional annotation charts, we can start comparing and visualising them. If you had an entire directory of them, it's possible to generate a dendrogram from them to measure their similarity using the zTransformDirectory function - here, however, we will focus on finer comparison methods.\\
-We can determine that almost no genes are shared by the two gene sets and there is next to no functional correlation by looking at the pairwise plots (Figure 1).\\
+If you have multiple functional annotation charts, you can start directly comparing and visualising them in a pairwise manner. If you had output many functional annotation charts to a directory, it's possible to generate a matrix using the zTransformDirectory function. This table can then be used as an input to clustering functions (under development). Below, we will consider two ways of visualising the differences between sets using pairwise scatterplots (Figure 1) and a directed acyclic graph (Figure 2).\\
+Figure 1: Pairwise scatterplot. The level of gene overlap between two sets is shown as the Jaccard coefficient, and the overall similarity between the GO enrichments is represented by the correlation. Using these examples, it can be noted that there is little gene overlap as well as little correlation.\\
 \begin{figure}
 \begin{center}
 <<label=fig1,fig=TRUE>>=
 plotZScores(funChart1, funChart2)
 @
 \end{center}
-\caption{Pairwise plot of Z scores for the two datasets}
+\caption{Pairwise plot of Z scores for the two datasets. Gene ontology terms are coloured by their Jaccard coefficient as represented in the legend.}
 \label{fig:one}
 \end{figure}
 
-Now, a great way to visualise the differences between these two sets is to use a directed acyclic graph of GO terms. Here, we colour each node based on the set or combinations of sets it originated from - yellow nodes are shared between two, red ones are the first input set, green ones are the second. In this case, there are several clear differences - funChart1 is enriched in oxygen and haeme binding, while funChart2 contains terms for transferase and protein kinase activity (Figure 2).\\
+Figure 2: Directed Acyclic Graph (DAG). In addition to pairwise plots, which provide an overview of the comparison, a great way to visualise the differences between two sets is to use a DAG of GO terms. Here, we colour each node based on the set or combinations of sets it originated from - yellow nodes are shared between two, red ones are the first input set, green ones are the second. In this case, there are several clear differences - funChart1 is enriched in oxygen and haeme binding, while funChart2 contains terms for transferase and protein kinase activity (Figure 2).\\
 \begin{figure}
 \begin{center}
 <<label=fig2,fig=TRUE>>=
 plotTwoGODags(funChart1, funChart2, ont="MF", cutoff=0.01)
 @
 \end{center}
-\caption{Directed acyclic graph showing differences in GO term enrichment}
+\caption{Directed acyclic graph showing differences in GO term enrichment: yellow means the term is present in both sets, red means the first input set, green means the second.}
 \label{fig:two}
 \end{figure}
 

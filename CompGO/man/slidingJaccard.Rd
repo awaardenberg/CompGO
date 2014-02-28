@@ -2,19 +2,15 @@
 \alias{slidingJaccard}
 \title{Plot two functional annotation charts using a sliding Jaccard coefficient}
 \usage{
-slidingJaccard(setA, setB, increment = 50, useRawPvals = FALSE,
-  setC = NULL, setD = NULL)
+slidingJaccard(setA, setB, increment = 50, setC = NULL, setD = NULL)
 }
 \arguments{
   \item{setA}{A DAVIDFunctionalAnnotationChart to compare}
 
   \item{setB}{A DAVIDFunctionalAnnotationChart to compare}
 
-  \item{increment}{The increment to use for each sliding
-  window}
-
-  \item{useRawPvals}{Use raw P-values instead of
-  Benjamini-corrected}
+  \item{increment}{The number of terms (n) to increment for
+  each sliding window}
 
   \item{setC}{A DAVIDFunctionalAnnotationChart to compare,
   optional}
@@ -26,11 +22,11 @@ slidingJaccard(setA, setB, increment = 50, useRawPvals = FALSE,
 This function compares two functional annotation charts
 using a sliding Jaccard coefficient - a ranked list of
 P-values is produced, and a sliding window is used to find
-out the Jaccard coefficient of the two charts at different
-cutoffs of the top n terms. This is useful to determine
-where the majority of overlapping terms is located, and can
-also be used to compare Jaccard profiles between sets if
-sets C and D are supplied.
+the Jaccard coefficient of two charts at different cutoffs
+of the top n terms. This is useful to determine where the
+majority of overlapping terms is located, and can also be
+used to compare Jaccard profiles between multiple (up to 4)
+sets if C and D are supplied.
 }
 \examples{
 \dontrun{

@@ -1,6 +1,6 @@
 \name{plotPairwise}
 \alias{plotPairwise}
-\title{Generates a scatterplot of two sets of GO terms}
+\title{Generates a scatterplot of two sets of GO terms based on DAVID P-values}
 \usage{
 plotPairwise(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA = T,
   model = "lm", ontology = NULL)

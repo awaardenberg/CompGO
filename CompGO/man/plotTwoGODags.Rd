@@ -2,7 +2,7 @@
 \alias{plotTwoGODags}
 \title{Plots a directed acyclic graph of GO terms from two different sources}
 \usage{
-plotTwoGODags(setA, setB, ont = "BP", cutoff = 0.1, maxLabel = NULL,
+plotTwoGODags(setA, setB, ont = "BP", cutoff = 0.01, maxLabel = NULL,
   fullNames = TRUE, Pvalues = TRUE)
 }
 \arguments{
@@ -26,8 +26,8 @@ plotTwoGODags(setA, setB, ont = "BP", cutoff = 0.1, maxLabel = NULL,
 Plots a directed acyclic graph of GO terms from two
 different sources, using colour to show intersection and
 difference. This is useful to see the specific functional
-differences between gene lists, instead of getting an
-overall metric of gene list similarity
+differences between gene lists, complementing the overall
+metric of gene list similarity
 }
 \examples{
 \dontrun{

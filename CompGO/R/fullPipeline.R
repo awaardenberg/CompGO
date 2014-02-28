@@ -48,12 +48,12 @@ annotateBedFromDb <- function(pathToBed = NULL, gRanges = NULL, db = NULL, windo
 }
 
 #' @title Get the functional annotation chart of a gene list using DAVID
-#' @description Uploads a gene list to DAVID, then performs a GO enrichment analysis. Requires registration with DAVID first at \href{http://david.abcc.ncifcrf.gov/webservice/register.htm} . Returns a DAVIDFunctionalAnnotationChart object which can be easily coerced into a data.frame. DAVID does some automatic thresholding on results. For Z-score standardisation, we found it useful to get DAVID to return all possible annotations despite non-significant P-values and perform our own thresholding.
+#' @description Uploads a gene list to DAVID, then performs a GO enrichment analysis. Requires registration with DAVID first \href{http://david.abcc.ncifcrf.gov/webservice/register.htm}{here}. Returns a DAVIDFunctionalAnnotationChart object which can be easily coerced into a data.frame. DAVID does some automatic thresholding on results. For Z-score standardisation, we found it useful to get DAVID to return all possible annotations despite non-significant P-values and perform our own thresholding.
 #' @export
 #' @param geneList Either a list of genes or a GRanges result from annotateBedFromDb to upload and functionally enrich
 #' @param david An RDAVIDWebService object can be passed to the function so a new one doesn't have to be requested each time
 #' @param email If david==NULL, an email must be supplied. DAVID requires (free) registration before users may interact with
-#'      their WebService API. This can be accomplished online (\href{http://david.abcc.ncifcrf.gov/webservice/register.htm}), then the registered email supplied here.
+#'      their WebService API. This can be accomplished online (\href{http://david.abcc.ncifcrf.gov/webservice/register.htm}{here}), then the registered email supplied here.
 #' @param idType The type of gene IDs being uploaded (MGI, Entrez,...)
 #' @param listName The name to give the list when it's uploaded to the WebService
 #' @param count Minimum number of genes per GO term
@@ -150,7 +150,7 @@ zTransformDirectory <- function(inputDir, cutoff=NULL, pattern = NULL, removeNA=
         }
         if(i>1) {
             z.merge.add <- doZtrans.single(table, file.name)
-            z.merge <- merge(z.merge, z.merge.add, by="Term", all.x=TRUE, all.y = TRUE)
+            z.merge <- merge(z.merge, z.merge.add, by="row.names", all.x=TRUE, all.y = TRUE)
             names(z.merge)[ncol(z.merge)] = file.name
         }
     }
@@ -160,9 +160,10 @@ zTransformDirectory <- function(inputDir, cutoff=NULL, pattern = NULL, removeNA=
     } else {
         z.merge[is.na(z.merge)] <- 0
     }
-    z.merge = cbind(z.merge, Var = apply(abs(z.merge[2:ncol(z.merge)]), 1, var))
-    z.merge = z.merge[order(-z.merge$Var), ]
+# Calculate variance, sort by variance, subset by lowest $cutoff$ terms if $cutoff$ supplied
     if(!is.null(cutoff)) {
+        z.merge = cbind(z.merge, Var = apply(abs(z.merge[2:ncol(z.merge)]), 1, var))
+        z.merge = z.merge[order(-z.merge$Var), ]
         z.merge = z.merge[1:cutoff,]
     }
 
@@ -187,22 +188,27 @@ doZtrans.single <- function(x, name) {
     }
 #Z-stats
     df = data.frame("Term" = x$Term)
-    df <- cbind(df, "OR"= (x[,3]/x[,7])/(x[,8]/x[,9]))
-    df <- cbind(df, "SE"=sqrt(1/x[,3] + 1/x[,7] + 1/x[,8] +1/x[,9]))
-    df <- cbind(df, "Z"= log(df$OR)/df$SE)
-#replace NAs with appropriate values:
-    df$Z[is.na(df$Z)] <- 0
+    df$OR = (x[,3]/x[,7])/(x[,8]/x[,9])
+    df$SE = sqrt(1/x[,3] + 1/x[,7] + 1/x[,8] +1/x[,9])
+    df$Z  = log(df$OR)/df$SE
+    #df[x$Count == 1,]$Z = 0
+
     df = subset(df, select=c(Term, Z))
-    #df <- cbind("Term" = df$Term, "Z"=df$Z)
-    colnames(df)<-c("Term", name)
+    rownames(df) = df$Term
+    df = subset(df, select = "Z")
+    colnames(df) = name
     return(df)
 }
 
 doZtrans.merge <- function(setA, setB) {
-    a = doZtrans.single(setA, "SetA")
-    b = doZtrans.single(setB, "SetB")
-    z.merge <- merge(a, b, by="Term", all.x=TRUE, all.y = TRUE)
-    names(z.merge) = c("Term", "SetA", "SetB")
+    nameA = deparse(substitute(setA))
+    nameB = deparse(substitute(setB))
+    a = doZtrans.single(setA, nameA)
+    b = doZtrans.single(setB, nameB)
+    z.merge <- merge(a, b, by="row.names", all.x=TRUE, all.y = TRUE)
+    names(z.merge) = c("Term", nameA, nameB)
+    rownames(z.merge) = z.merge$Term
+    z.merge = subset(z.merge, select=c(nameA, nameB))
     return(z.merge)
 }
 
@@ -212,18 +218,18 @@ doZtrans.merge <- function(setA, setB) {
 ## NOT INCLUDED IN PACKAGE FOR NOW
 ############################################
 
-#' @title Plot ECDFs of two functional annotation charts and include K-S statistics of distribution similarity
-#' @description Uses a two-sample Kolmogorov-Smirnov test on the supplied fnAnot charts to test whether the underlying distributions of their P-values differ. Can be used as a metric for similarity between test sets.
-#' @param setA A DAVIDFunctionalAnnotationChart to compare
-#' @param setB A DAVIDFunctionalAnnotationChart to compare
-#' @param useRawPvals Use raw P-values instead of Benjamini-corrected
-#' @param useZscores Instead of comparing P-values, normalise the GO terms to Z-scores and perform test on that
+# @title Plot ECDFs of two functional annotation charts and include K-S statistics of distribution similarity
+# @description Uses a two-sample Kolmogorov-Smirnov test on the supplied fnAnot charts to test whether the underlying distributions of their P-values differ. Can be used as a metric for similarity between test sets.
+# @param setA A DAVIDFunctionalAnnotationChart to compare
+# @param setB A DAVIDFunctionalAnnotationChart to compare
+# @param useRawPvals Use raw P-values instead of Benjamini-corrected
+# @param useZscores Instead of comparing P-values, normalise the GO terms to Z-scores and perform test on that
 # @export
-#' @examples
-#' # don't run, it just produces a plot which is not instructive in CLI examples
-#' \dontrun{
-#' ksTest(fnAnot.1, fnAnot.2)
-#' }
+# @examples
+# # don't run, it just produces a plot which is not instructive in CLI examples
+# \dontrun{
+# ksTest(fnAnot.1, fnAnot.2)
+# }
 ksTest <- function(setA, setB, useRawPvals = FALSE, useZscores = FALSE) {
     if(useZscores == T) {
         x = doZtrans.merge(setA, setB)
@@ -392,6 +398,11 @@ plotZScores <- function(setA, setB, cutoff = NULL, plotNA = F, model='lm') {
     geneA = strsplit(geneA, ', ')
     geneB = strsplit(geneB, ', ')
 
+    nAllGenes = intersect(unique(unlist(geneA)), unique(unlist(geneB)))
+    uAllGenes = union(unique(unlist(geneA)), unique(unlist(geneB)))
+    totJaccard= length(nAllGenes)/length(uAllGenes)
+    totJaccard= format(round(totJaccard, 4), nsmall=4)
+
 # Either get the union or intersection of GO terms depending on whether NAs are to be plotted
     if (plotNA == F) {
         keys = unique(intersect(names(geneA), names(geneB)))
@@ -404,18 +415,22 @@ plotZScores <- function(setA, setB, cutoff = NULL, plotNA = F, model='lm') {
 
 # Calculate jaccards from intersection/union
     jaccards = mapply(function(x, y) {length(x)/length(y)}, n, u)
-    jaccards = data.frame("Term" = names(jaccards), "jaccard" = jaccards)
-    zAll = merge(zAll, jaccards, by = "Term")
+    #jaccards = data.frame("Term" = names(jaccards), "jaccard" = jaccards)
+    zAll = merge(zAll, jaccards, by = "row.names")
+    rownames(zAll) = zAll[,1]
+    zAll = zAll[,2:4]
+    colnames(zAll) = c("setA", "setB", "jaccard")
 
-    corr = cor(zAll$SetA, zAll$SetB)
+    browser()
+    corr = cor(zAll$setA, zAll$setB)
     corr = format(round(corr, 4), nsmall=4)
     print(corr)
-    p = ggplot(zAll, aes(SetA, SetB))
+    p = ggplot(zAll, aes(setA, setB))
     p = p + geom_point(aes_string(colour="jaccard"), size=2) + theme(axis.text.x=element_text(size=6), axis.text.y=element_text(size=6),
         axis.line=element_line(), axis.title=element_text(size=6, face="bold"), legend.text=element_text(size=6), legend.title=element_text(size=6))
     p = p + scale_colour_gradient2(expression(over(abs(paste("A", intersect(), "B")), abs(paste("A", union(), "B")))),
         low="red", mid="red", high="blue", limits=c(0, 1))
-    p = p + annotate("text", label = paste("R =", corr), x = Inf, hjust = 1, y = Inf, vjust = 5, size = 5, colour = "black")
+    p = p + annotate("text", label = paste("R =", corr, "\nJc=", totJaccard), x = Inf, hjust = 1, y = Inf, vjust = 5, size = 5, colour = "black")
     p = p + geom_smooth(method=model)
     return(p)
 }

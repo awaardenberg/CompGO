@@ -1,21 +1,24 @@
 \name{doZtrans.single}
 \alias{doZtrans.single}
-\title{Perform Z transform to single fnAnot table}
+\title{Z transform a single functional annotation chart from DAVID}
 \usage{
 doZtrans.single(x, name)
 }
 \arguments{
-  \item{x}{The fnAnot chart to apply the transformation to}
+  \item{x}{The functional annotation chart to apply the
+  transformation to}
 
-  \item{name}{The name to give the Z-score column}
+  \item{name}{(optional) The name to give the Z-score
+  column; if not supplied, name is derived from the input
+  variable}
 }
 \value{
 A data.frame of GO terms and Z-scores
 }
 \description{
-Decomposes each GO term in an fnAnot table to its Z-score
-these tables can be merged to produce a dendrogram or
-similar
+Decomposes each GO term in a functional annotation chart
+(returned from getFnAnot_genome()) to its Z-score. These
+tables can be merged for clustering
 }
 \examples{
 \dontrun{

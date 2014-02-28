@@ -11,21 +11,20 @@ plotZScores(setA, setB, cutoff = NULL, plotNA = F, model = "lm")
   \item{setB}{DAVIDFunctionalAnnotationChart object to
   compare}
 
-  \item{plotNA}{Whether to plot NAs or set them to 0}
+  \item{plotNA}{Whether to remove NAs entirely or set all
+  NAs to 0}
 
   \item{model}{The model to use when plotting linear fit,
   default 'lm'}
 
-  \item{cutoff}{If you want to apply a cutoff to each list
-  before generating Z scores, supply it here}
+  \item{cutoff}{If you want to apply a Benjamini corrected
+  P-value cutoff to each list before generating Z scores,
+  supply it here}
 }
 \description{
 Generates a scatterplot of z transformed GO terms and plots
-the result, which is normalised for set size, along with
-the Jaccard metric for each GO term and linear fit +
-correlation. More statistically sound version of the
-plotPairwise function, which examines the P-values of the
-two sets directly.
+the result along with the Jaccard metric for each GO term
+and linear fit + correlation.
 }
 \examples{
 \dontrun{

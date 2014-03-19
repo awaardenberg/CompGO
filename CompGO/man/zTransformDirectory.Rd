@@ -2,7 +2,8 @@
 \alias{zTransformDirectory}
 \title{Z-score transformation of DAVID functional annotation charts in a supplied directory}
 \usage{
-zTransformDirectory(inputDir, cutoff = NULL, pattern = NULL, removeNA = F)
+zTransformDirectory(inputDir, cutoff = NULL, pattern = NULL,
+  removeNA = FALSE)
 }
 \arguments{
   \item{inputDir}{The directory to search for functional

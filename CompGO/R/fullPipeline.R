@@ -16,11 +16,6 @@
 #' range = GRanges(seqnames=bed.sample$chr, IRanges(start=bed.sample$start, end=bed.sample$end))
 #' x = annotateBedFromDb(gRanges = range, db = txdb)
 #' x
-#' ## Alternative is to supply a system path directly to the .bed file:
-#' \dontrun{
-#' x = annotateBedFromDb(pathToBed = "~/data/experiment.bed", db = txdb)
-#' x
-#' }
 annotateBedFromDb <- function(pathToBed = NULL, gRanges = NULL, db = NULL, window = 5000) {
     if (!is.null(pathToBed) && !is.null(gRanges)) {
         stop("Both bed and path supplied, please use only one.")
@@ -95,7 +90,7 @@ getFnAnot_genome <- function(geneList, david = NULL, email = NULL, idType = "ENT
         message("uploading background...")
         addList(david, background, idType = ifelse(is.null(bgIdType), idType, bgIdType), listName = ifelse(is.null(bgListName), "auto_bg", bgListName), listType = "Background")
     }
-    
+
     fnAnot <- getFunctionalAnnotationChart(david, threshold=PVal, count=count)
     return(fnAnot)
 }
@@ -134,7 +129,7 @@ subOntology <- function(set, ont) {
 #' dist.cor <- hclust(dist(1-d), method="complete")
 #' plot(dist.cor, xlab="Complete linkage", sub = NA)
 #' }
-zTransformDirectory <- function(inputDir, cutoff=NULL, pattern = NULL, removeNA=F) {
+zTransformDirectory <- function(inputDir, cutoff=NULL, pattern = NULL, removeNA= FALSE) {
     file.list <- list.files(inputDir, pattern = pattern, full.names = TRUE)
 #initialise the table:
     z.merge <- matrix()
@@ -179,9 +174,10 @@ zTransformDirectory <- function(inputDir, cutoff=NULL, pattern = NULL, removeNA=
 #' @return A data.frame of GO terms and Z-scores
 #' @export
 #' @examples
-#' \dontrun{
-#' fnAnot.zscore = doZtrans.single(fnAnot)
-#' }
+#' # Load example fnAnot charts from DAVID:
+#' data(funChart1)
+#' zscore = doZtrans.single(funChart1)
+#' str(zscore)
 doZtrans.single <- function(x, name) {
     if(missing(name)) {
         name = deparse(substitute(x))
@@ -212,46 +208,6 @@ doZtrans.merge <- function(setA, setB) {
     return(z.merge)
 }
 
-############################################
-## UNSURE OF K-S TEST VALIDITY FOR COMPARING
-## VALUES DRAWN FROM SAME DISTRIBUTION, 
-## NOT INCLUDED IN PACKAGE FOR NOW
-############################################
-
-# @title Plot ECDFs of two functional annotation charts and include K-S statistics of distribution similarity
-# @description Uses a two-sample Kolmogorov-Smirnov test on the supplied fnAnot charts to test whether the underlying distributions of their P-values differ. Can be used as a metric for similarity between test sets.
-# @param setA A DAVIDFunctionalAnnotationChart to compare
-# @param setB A DAVIDFunctionalAnnotationChart to compare
-# @param useRawPvals Use raw P-values instead of Benjamini-corrected
-# @param useZscores Instead of comparing P-values, normalise the GO terms to Z-scores and perform test on that
-# @export
-# @examples
-# # don't run, it just produces a plot which is not instructive in CLI examples
-# \dontrun{
-# ksTest(fnAnot.1, fnAnot.2)
-# }
-ksTest <- function(setA, setB, useRawPvals = FALSE, useZscores = FALSE) {
-    if(useZscores == T) {
-        x = doZtrans.merge(setA, setB)
-    } else {
-        x = extractPvalTable(setA, setB, useRawPvals)
-    }
-
-    stats <- ks.test(x[,2], x[,3])
-    D.stat <- round(stats$statistic[[1]], 3)
-    p.stat <- round(stats$p.value, 3)
-    cor.val <- round(cor(-log(x[,2],10), -log(x[,3], 10), method="spearman", use="na.or.complete"),3)
-#determine the cumulative distributions:
-    ecdf.a <- ecdf(x[,2])
-    ecdf.b <- ecdf(x[,3])
-#set plotting parameters:
-    plot(ecdf.a, verticals=TRUE, do.points=FALSE,
-        col="red", main="", xlab=ifelse(useZscores,"zscore","pval"), ylab="Cumulative Probability")
-    plot(ecdf.b, verticals=TRUE, do.points=FALSE, col="green", add=TRUE)
-    legend("bottomright", c(paste("D=", D.stat, sep=""), paste("p=", p.stat, sep="")), pch=1,
-        title="K-S stats:", inset = .02)
-}
-
 #' @title Plot two functional annotation charts using a sliding Jaccard coefficient
 #' @description This function compares two functional annotation charts using a sliding Jaccard coefficient - a ranked list of P-values is produced, and a sliding window is used to find the Jaccard coefficient of two charts at different cutoffs of the top n terms. This is useful to determine where the majority of overlapping terms is located, and can also be used to compare Jaccard profiles between multiple (up to 4) sets if C and D are supplied.
 #' @param setA A DAVIDFunctionalAnnotationChart to compare
@@ -261,11 +217,9 @@ ksTest <- function(setA, setB, useRawPvals = FALSE, useZscores = FALSE) {
 #' @param setD A DAVIDFunctionalAnnotationChart to compare, optional
 #' @export
 #' @examples
-#' \dontrun{
-#' setA = getFnAnot_genome(entrezList, email = "email")
-#' setB = getFnAnot_genome(entrezList2, email = "email")
-#' slidingJaccard(setA, setB, 50, FALSE)
-#' }
+#' data(funChart1)
+#' data(funChart2)
+#' slidingJaccard(funChart1, funChart2, 50, FALSE)
 slidingJaccard <- function(setA, setB, increment = 50, setC = NULL, setD = NULL) {
     pvals = extractPvalTable(setA, setB, useRawPvals = FALSE)
     result = doJACCit(pvals, increment)
@@ -330,7 +284,7 @@ extractPvalTable <- function(setA, setB, useRawPvals) {
 
     setA_comp = data.frame("Term" = names(setA_val), "SetA" = setA_val)
     setB_comp = data.frame("Term" = names(setB_val), "SetB" = setB_val)
-    comp = merge(setA_comp, setB_comp, all.x=TRUE, all.y=T, by="Term")
+    comp = merge(setA_comp, setB_comp, all.x=TRUE, all.y= TRUE, by="Term")
 
     return(comp)
 }
@@ -344,12 +298,10 @@ extractPvalTable <- function(setA, setB, useRawPvals) {
 #' @param model The model to use when plotting linear fit, default 'lm'
 #' @param cutoff If you want to apply a Benjamini corrected P-value cutoff to each list before generating Z scores, supply it here
 #' @examples
-#' \dontrun{
-#' # This is not run because it requires the entire pathway
-#' # to be complete beforehand, which requires registration with DAVID.
-#' plotZScores(fnAnot.list1, fnAnot.list2)
-#' }
-plotZScores <- function(setA, setB, cutoff = NULL, plotNA = F, model='lm') {
+#' data(funChart1)
+#' data(funChart2)
+#' plotZScores(funChart1, funChart2)
+plotZScores <- function(setA, setB, cutoff = NULL, plotNA = FALSE, model='lm') {
     if (all(c("Category", "X.", "PValue", "Benjamini") %in% names(setA))) {
         #zAll = doZtrans.single(setA, "SetA")
         #names(zAll)[ncol(zAll)] = "SetA"
@@ -384,7 +336,7 @@ plotZScores <- function(setA, setB, cutoff = NULL, plotNA = F, model='lm') {
 
     zAll = doZtrans.merge(setA, setB)
 
-    if(plotNA == T) {
+    if(plotNA == TRUE) {
         zAll[is.na(zAll)] <- 0
     } else {
         zAll = zAll[complete.cases(zAll),]
@@ -404,7 +356,7 @@ plotZScores <- function(setA, setB, cutoff = NULL, plotNA = F, model='lm') {
     totJaccard= format(round(totJaccard, 4), nsmall=4)
 
 # Either get the union or intersection of GO terms depending on whether NAs are to be plotted
-    if (plotNA == F) {
+    if (plotNA == FALSE) {
         keys = unique(intersect(names(geneA), names(geneB)))
     } else {
         keys = unique(c(names(geneA), names(geneB)))
@@ -421,7 +373,6 @@ plotZScores <- function(setA, setB, cutoff = NULL, plotNA = F, model='lm') {
     zAll = zAll[,2:4]
     colnames(zAll) = c("setA", "setB", "jaccard")
 
-    browser()
     corr = cor(zAll$setA, zAll$setB)
     corr = format(round(corr, 4), nsmall=4)
     print(corr)
@@ -446,12 +397,10 @@ plotZScores <- function(setA, setB, cutoff = NULL, plotNA = F, model='lm') {
 #' @param model The model to use when plotting linear fit, default 'lm'
 #' @param ontology If a specific ontology (MF, BP, CC) is wanted rather than all terms, supply it here as a string
 #' @examples
-#' \dontrun{
-#' # This is not run because it requires the entire pathway
-#' # to be complete beforehand, which requires registration with DAVID.
-#' plotPairwise(fnAnot.list1, fnAnot.list2, cutoff=0.05)
-#' }
-plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=T, model='lm', ontology=NULL) {
+#' data(funChart1)
+#' data(funChart2)
+#' plotPairwise(funChart1, funChart2)
+plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA= TRUE, model='lm', ontology=NULL) {
     if(!is.null(ontology)) {
         if(ontology %in% c("BP", "MF", "CC")) {
             setA = subOntology(setA, ontology)
@@ -496,7 +445,7 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
 
     setA_comp = data.frame("Term" = names(setA_val), "setA_val" = setA_val)
     setB_comp = data.frame("Term" = names(setB_val), "setB_val" = setB_val)
-    comp = merge(setA_comp, setB_comp, all.x=TRUE, all.y=T, by="Term")
+    comp = merge(setA_comp, setB_comp, all.x=TRUE, all.y= TRUE, by="Term")
 
     if(plotNA) {
         comp[is.na(comp)] <- 1
@@ -522,7 +471,7 @@ plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA=
     totJaccard= format(round(totJaccard, 4), nsmall=4)
 
 # Either get the union or intersection of GO terms depending on whether NAs are to be plotted
-    if (plotNA == F) {
+    if (plotNA == FALSE) {
         keys = unique(intersect(names(geneA), names(geneB)))
     } else {
         keys = unique(c(names(geneA), names(geneB)))
@@ -573,11 +522,9 @@ extractGOFromAnnotation <- function(fnAnot) {
 #' @references Fresno, C. and Fernandes, E. (2013) RDAVIDWebService: An R Package for retrieving data from DAVID into R objects using Web Services API.
 #'      \url{http://david.abcc.ncifcrf.gov/}
 #' @examples
-#' \dontrun{
-#' # The entire pathway must be run for this example to work,
-#' # which takes too long for compilation.
-#' plotTwoGODags(fnAnot.geneList1, fnAnot.geneList2)
-#' }
+#' data(funChart1)
+#' data(funChart2)
+#' plotTwoGODags(funChart1, funChart2)
 plotTwoGODags <- function (setA, setB, ont = "BP", cutoff = 0.01, maxLabel = NULL, fullNames = TRUE, Pvalues = TRUE) {
     i = sapply(setA, is.factor)
     setA[i] = lapply(setA[i], as.character)
@@ -590,7 +537,7 @@ plotTwoGODags <- function (setA, setB, ont = "BP", cutoff = 0.01, maxLabel = NUL
     setU = mergeFnAnotCharts(setA, setB)
 
     if(ont %in% c("BP", "MF", "CC")) {
-        r = DAVIDGODag(setU, ont, cutoff, removeUnattached=T)
+        r = DAVIDGODag(setU, ont, cutoff, removeUnattached= TRUE)
         g = goDag(r)
     } else {
         stop("Please supply a valid ontology category")
@@ -616,7 +563,7 @@ plotTwoGODags <- function (setA, setB, ont = "BP", cutoff = 0.01, maxLabel = NUL
 
 # Subset term length if supplied
     if(!is.null(maxLabel)) {
-        nodeLabels = sapply(nodeLabels, substr, 1L, maxLabel, USE.NAMES=F)
+        nodeLabels = sapply(nodeLabels, substr, 1L, maxLabel, USE.NAMES= FALSE)
     }
 
     setU$Term = sub("~.*","",setU$Term)
@@ -628,7 +575,7 @@ plotTwoGODags <- function (setA, setB, ont = "BP", cutoff = 0.01, maxLabel = NUL
     nodeFont = ifelse(names(labels) %in% sub("~.*", "", overlap), 16, ifelse(names(labels) %in% sub("~.*", "", setA$Term), 16,
         ifelse(names(labels) %in% sub("~.*", "", setB$Term), 16, 0.1)))
 
-    nattr = makeNodeAttrs(g, label = nodeLabels, shape = nodeShapes, fillcolor = nodeColours, fixedsize=F, fontsize=nodeFont)
+    nattr = makeNodeAttrs(g, label = nodeLabels, shape = nodeShapes, fillcolor = nodeColours, fixedsize= FALSE, fontsize=nodeFont)
     x <- layoutGraph(g, nodeAttrs = nattr)
     nodeRenderInfo(x) <- list(fontsize=nattr$fontsize)
     renderGraph(x)
@@ -663,7 +610,7 @@ plotRankedZDAG <- function (setA, setB, ont = "BP", n = 100, maxLabel = NULL, fu
     overlap  = intersect(setA$Term, setB$Term)
     setBuniq = subset(setB, !setB$Term %in% overlap)
 
-    setU = merge(setA, setB, by = "Term", all = F)
+    setU = merge(setA, setB, by = "Term", all = FALSE)
 # Perform OR/Z-score calculation here
 
     setU = setU[with(setU, order(Z)), ]
@@ -696,7 +643,7 @@ plotRankedZDAG <- function (setA, setB, ont = "BP", n = 100, maxLabel = NULL, fu
 
 # Subset term length if supplied
     if(!is.null(maxLabel)) {
-        nodeLabels = sapply(nodeLabels, substr, 1L, maxLabel, USE.NAMES=F)
+        nodeLabels = sapply(nodeLabels, substr, 1L, maxLabel, USE.NAMES= FALSE)
     }
 
     setU$Term = sub("~.*","",setU$Term)
@@ -708,7 +655,7 @@ plotRankedZDAG <- function (setA, setB, ont = "BP", n = 100, maxLabel = NULL, fu
     nodeFont = ifelse(names(labels) %in% sub("~.*", "", overlap), 16, ifelse(names(labels) %in% sub("~.*", "", setA$Term), 16,
         ifelse(names(labels) %in% sub("~.*", "", setB$Term), 16, 0.1)))
 
-    nattr = makeNodeAttrs(g, label = nodeLabels, shape = nodeShapes, fillcolor = nodeColours, fixedsize=F, fontsize=nodeFont)
+    nattr = makeNodeAttrs(g, label = nodeLabels, shape = nodeShapes, fillcolor = nodeColours, fixedsize= FALSE, fontsize=nodeFont)
     x <- layoutGraph(g, nodeAttrs = nattr)
     nodeRenderInfo(x) <- list(fontsize=nattr$fontsize)
     renderGraph(x)

@@ -51,7 +51,7 @@ head(sample.annotated)
 Once we have this annotated GRanges object, we can derive a list of genes to query DAVID and retrieve a full functional annotation chart. Alternatively, a list of genes can be directly supplied to DAVID. Note that there are several parameters available for tweaking the results returned from DAVID. Users can specify PVal and count; however, by default, no thresholding is performed. Since DAVID requires registration before the use of their Web Service R package, you should register first then substitute the placeholder email for your own.
 <<>>=
 # fnAnot = getFnAnot_genome(sample.annotated$gene_id,
-#    email = "PLaceholder@inst.edu", listName="sample")
+#    email = "P.Lace-holder@inst.edu", listName="sample")
 # We instead use examples taken from the RDAVIDWebService package
 # to illustrate the utility of this package:
 data(funChart1)

@@ -2,7 +2,7 @@
 \alias{plotZScores}
 \title{Performs z transform on two sets of GO terms and plots scatterplot of result}
 \usage{
-plotZScores(setA, setB, cutoff = NULL, plotNA = F, model = "lm")
+plotZScores(setA, setB, cutoff = NULL, plotNA = FALSE, model = "lm")
 }
 \arguments{
   \item{setA}{DAVIDFunctionalAnnotationChart object to
@@ -27,10 +27,8 @@ the result along with the Jaccard metric for each GO term
 and linear fit + correlation.
 }
 \examples{
-\dontrun{
-# This is not run because it requires the entire pathway
-# to be complete beforehand, which requires registration with DAVID.
-plotZScores(fnAnot.list1, fnAnot.list2)
-}
+data(funChart1)
+data(funChart2)
+plotZScores(funChart1, funChart2)
 }
 

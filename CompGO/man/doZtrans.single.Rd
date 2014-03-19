@@ -21,8 +21,9 @@ Decomposes each GO term in a functional annotation chart
 tables can be merged for clustering
 }
 \examples{
-\dontrun{
-fnAnot.zscore = doZtrans.single(fnAnot)
-}
+# Load example fnAnot charts from DAVID:
+data(funChart1)
+zscore = doZtrans.single(funChart1)
+str(zscore)
 }
 

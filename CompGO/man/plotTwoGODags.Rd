@@ -30,11 +30,9 @@ differences between gene lists, complementing the overall
 metric of gene list similarity
 }
 \examples{
-\dontrun{
-# The entire pathway must be run for this example to work,
-# which takes too long for compilation.
-plotTwoGODags(fnAnot.geneList1, fnAnot.geneList2)
-}
+data(funChart1)
+data(funChart2)
+plotTwoGODags(funChart1, funChart2)
 }
 \references{
 Fresno, C. and Fernandes, E. (2013) RDAVIDWebService: An R

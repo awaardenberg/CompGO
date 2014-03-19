@@ -2,8 +2,8 @@
 \alias{plotPairwise}
 \title{Generates a scatterplot of two sets of GO terms based on DAVID P-values}
 \usage{
-plotPairwise(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA = T,
-  model = "lm", ontology = NULL)
+plotPairwise(setA, setB, cutoff = NULL, useRawPvals = FALSE,
+  plotNA = TRUE, model = "lm", ontology = NULL)
 }
 \arguments{
   \item{setA}{DAVIDFunctionalAnnotationChart object to
@@ -38,10 +38,8 @@ more statistically sound, you should use that instead of
 this.
 }
 \examples{
-\dontrun{
-# This is not run because it requires the entire pathway
-# to be complete beforehand, which requires registration with DAVID.
-plotPairwise(fnAnot.list1, fnAnot.list2, cutoff=0.05)
-}
+data(funChart1)
+data(funChart2)
+plotPairwise(funChart1, funChart2)
 }
 

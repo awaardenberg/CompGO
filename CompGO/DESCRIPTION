@@ -22,4 +22,4 @@ Imports:
     ggplot2,
     GenomicFeatures,
     TxDb.Mmusculus.UCSC.mm9.knownGene
-biocViews: Annotation, Bioinformatics
+biocViews: GeneSetEnrichment, MultipleComparison, GO, Visualization

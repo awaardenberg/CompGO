@@ -29,10 +29,8 @@ used to compare Jaccard profiles between multiple (up to 4)
 sets if C and D are supplied.
 }
 \examples{
-\dontrun{
-setA = getFnAnot_genome(entrezList, email = "email")
-setB = getFnAnot_genome(entrezList2, email = "email")
-slidingJaccard(setA, setB, 50, FALSE)
-}
+data(funChart1)
+data(funChart2)
+slidingJaccard(funChart1, funChart2, 50, FALSE)
 }
 

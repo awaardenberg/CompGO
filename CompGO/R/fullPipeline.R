@@ -72,7 +72,7 @@ annotateBedFromDb <- function(pathToBed = NULL, gRanges = NULL, db = NULL, windo
 #' }
 getFnAnot_genome <- function(geneList, david = NULL, email = NULL, idType = "ENTREZ_GENE_ID", listName = "auto_list", count = 1L, PVal = 1, background = NULL, bgIdType = NULL, bgListName = NULL) {
     if (is.null(david) && !is.null(email)) {
-        david <- DAVIDWebService$new(email = email)
+        david <- RDAVIDWebService::DAVIDWebService$new(email = email)
     }
     if(class(geneList) == "GRanges") {
         geneList = unique(unlist(as.character(geneList$gene_id)))
@@ -256,6 +256,87 @@ doJACCit <- function(x, it){#it = increment
     }
     return(matrix.jacc)#return the matrix for plotting
 }#end of function
+
+######################
+## More from Ash
+## 26/03/14
+######################
+
+# function wants pre-merged table, i.e. two fnAnot charts merged on "Term"
+# accept two fnAnot charts as args instead
+# filters out any GO term with less than 10 genes associated, along with any terms
+# present in one fnAnot chart and not the other.
+# returns data.frame with cols term, z score of first, z score of second,
+# compared z scores, p-value of comparison.
+
+# a flag can also add columns for gene information: genes in setA, genes in setB, intersect.
+#' @title Compare the Z scores of individual GO terms between two input annotation charts
+#' @description Accepts two fnAnot charts as args, does z score and p value calculations
+#' on them and returns a data.frame with important data. A flag, geneInfo, is provided
+#' in case the user wants to get information about the intersection and union of genes
+#' corresponding to the individual GO terms. Importantly, this function does some implicit
+#' thresholding: only terms with a minimum of 'cutoff' genes are compared,
+#' and any term present in one list but not the other is discarded.
+#' @export
+#' @param setA FunctionalAnnotationChart to compare
+#' @param setB FunctionalAnnotationChart to compare
+#' @param geneInfo Whether to add gene intersection and union info to the data.frame
+#' @param cutoff The minimum number of genes to threshold terms by
+#' @return A data.frame with columns: Term, Zscore.A, Zscore.B, ComparedZ, Pvalue
+#' (optionally geneUnion, geneIntersect as well).
+#' @examples
+#' data(funChart1)
+#' data(funChart2)
+#' cz = compareZscores(funChart1, funChart2)
+#' str(cz)
+#' cz = compareZscores(funChart1, funChart2, geneInfo = T)
+#' str(cz)
+compareZscores <- function(setA, setB, geneInfo = FALSE, cutoff = 10) {
+    if(!"Term" %in% names(setA) | !"Term" %in% names(setB))
+        stop("Please supply valid functional annotation charts as arguments")
+    setA = subset(setA, setA$Count >= cutoff)
+    setB = subset(setB, setB$Count >= cutoff)
+    # merged table
+    mt = merge(setA, setB, by="Term", all = FALSE)
+    # odds ratios
+    or.x = (mt$Count.x/mt$List.Total.x)/(mt$Pop.Hits.x/mt$Pop.Total.x)
+    or.y = (mt$Count.y/mt$List.Total.y)/(mt$Pop.Hits.y/mt$Pop.Total.y)
+    # std errors
+    ster.x = sqrt(1/mt$Count.x + 1/mt$List.Total.x + 1/mt$Pop.Hits.x +1/mt$Pop.Total.x)
+    ster.y = sqrt(1/mt$Count.y + 1/mt$List.Total.y + 1/mt$Pop.Hits.y +1/mt$Pop.Total.y)
+    # zscores
+    zscores = (log(or.x) - log(or.y))/sqrt((ster.x)^2 + (ster.y)^2)
+    z.pvals = 2*pnorm(-abs(zscores))
+    z.x     = log(or.x)/ster.x
+    z.y     = log(or.y)/ster.y
+    # merge into data.frame
+    if(!geneInfo) {
+        result = data.frame("Term" = mt$Term, "Zscore.A" = z.x, 
+            "Zscore.B" = z.y, "ComparedZ" = zscores, "Pvalue" = z.pvals)
+    } else {
+        # tricky gene stuff follows
+        # gets comma-separated genes as vector of strings,
+        # each of these strings is given name of initial term:
+        geneA = setA$Genes
+        names(geneA) = setA$Term
+        geneB = setB$Genes
+        names(geneB) = setB$Term
+        # split strings into genes
+        geneA = strsplit(geneA, ', ')
+        geneB = strsplit(geneB, ', ')
+        # get the conserved GO terms between the two sets
+        keys = unique(intersect(names(geneA), names(geneB)))
+        # currently, these are named lists of lists of genes.
+        # for each term, we want to find the intersection of the genes.
+        n = setNames(mapply(intersect, geneA[keys], geneB[keys]), keys)
+        u = setNames(mapply(union, geneA[keys], geneB[keys]), keys)
+        result = data.frame("Term" = mt$Term, "Zscore.A" = z.x, 
+            "Zscore.B" = z.y, "ComparedZ" = zscores, "Pvalue" = z.pvals, 
+            "geneUnion" = u, "geneIntersect" = n)
+    }
+    return(result)
+}
+
 
 extractPvalTable <- function(setA, setB, useRawPvals) {
     if(all(c("Category", "X.", "PValue", "Benjamini") %in% names(setA))) {

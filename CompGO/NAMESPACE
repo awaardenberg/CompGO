@@ -8,8 +8,5 @@ export(plotPairwise)
 export(plotTwoGODags)
 
 import(rtracklayer, Rgraphviz, ggplot2, GenomicFeatures, TxDb.Mmusculus.UCSC.mm9.knownGene)
-importClassFrom(RDAVIDWebService, DAVIDWebService)
-importFrom(RDAVIDWebService, DAVIDWebService)
 importFrom("RDAVIDWebService", connect, addList, setAnnotationCategories, setCurrentBackgroundPosition, getFunctionalAnnotationChart)
 importFrom("RDAVIDWebService", DAVIDFunctionalAnnotationChart, DAVIDGODag)
-import(RDAVIDWebService)

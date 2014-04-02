@@ -283,7 +283,7 @@ doJACCit <- function(x, it){#it = increment
 #' @param geneInfo Whether to add gene intersection and union info to the data.frame
 #' @param cutoff The minimum number of genes to threshold terms by
 #' @return A data.frame with columns: Term, Zscore.A, Zscore.B, ComparedZ, Pvalue
-#' (optionally geneUnion, geneIntersect as well).
+#' (optionally geneUnion, geneIntersect as well, which are comma-separated strings).
 #' @examples
 #' data(funChart1)
 #' data(funChart2)
@@ -330,9 +330,11 @@ compareZscores <- function(setA, setB, geneInfo = FALSE, cutoff = 10) {
         # for each term, we want to find the intersection of the genes.
         n = setNames(mapply(intersect, geneA[keys], geneB[keys]), keys)
         u = setNames(mapply(union, geneA[keys], geneB[keys]), keys)
+        n = lapply(n, paste, collapse = ", ")
+        u = lapply(u, paste, collapse = ", ")
         result = data.frame("Term" = mt$Term, "Zscore.A" = z.x, 
             "Zscore.B" = z.y, "ComparedZ" = zscores, "Pvalue" = z.pvals, 
-            "geneUnion" = u, "geneIntersect" = n)
+            "geneUnion" = unlist(u), "geneIntersect" = unlist(n))
     }
     return(result)
 }
@@ -681,27 +683,33 @@ mergeFnAnotCharts = function(setA, setB) {
     return(setU)
 }
 
-plotRankedZDAG <- function (setA, setB, ont = "BP", n = 100, maxLabel = NULL, fullNames = TRUE, Pvalues = TRUE) {
+plotZRankedDAG <- function (setA, setB, ont = "BP", n = 100, maxLabel = NULL, 
+    fullNames = TRUE, Pvalues = TRUE) {
+    # Wish to plot DAG based on Z score comparisons (P-values thereof)
+    # Recall that the compare Z score function omits all NAs... I guess we can only do direct
+    # single-colour plots. 
+    # In this case, since DAVID needs an fnAnot chart, maybe cut down one of the input
+    # sets to those returned by the comparison function and replace the relevant info with
+    # that which has been generated?
 
-    i = sapply(setA, is.factor)
-    setA[i] = lapply(setA[i], as.character)
-    i = sapply(setB, is.factor)
-    setB[i] = lapply(setB[i], as.character)
+    # in this case, we don't need any of the code below (except maybe if we want to increase
+    # saturation with P-value). We can just use davidGODag() then plotGOTermGraph().
 
-    overlap  = intersect(setA$Term, setB$Term)
-    setBuniq = subset(setB, !setB$Term %in% overlap)
+    compared = compareZscores(setA, setB, geneInfo=T)
+    compared = compared[order(compared$Pvalue),]
+    compared = compared[1:n,]
+    setU = setA
+    setU = subset(setU, setU$Term %in% compared$Term)
+    setU$PValue = compared$Pvalue
+    setU$Genes = compared$geneUnion
 
-    setU = merge(setA, setB, by = "Term", all = FALSE)
-# Perform OR/Z-score calculation here
-
-    setU = setU[with(setU, order(Z)), ]
-    setU = setU[1:n,]
+    setU = DAVIDFunctionalAnnotationChart(setU)
 
     if(ont %in% c("BP", "MF", "CC")) {
-        r = DAVIDGODag(setU, ont, cutoff)
+        r = DAVIDGODag(setU, ont, 1, removeUnattached= TRUE)
         g = goDag(r)
     } else {
-        stop("Please supply a valid ontology category")
+        stop("Please supply a valid ontology category (BP, MF or CC)")
     }
 
     n = nodes(g)
@@ -712,12 +720,14 @@ plotRankedZDAG <- function (setA, setB, ont = "BP", n = 100, maxLabel = NULL, fu
 
     if(fullNames && Pvalues) {
         nodeLabels = paste(names(unlist(nodeData(g, attr = "term"))), "~",
-            unlist(nodeData(g, attr = "term")),"\nP-value:", unlist(nodeData(g, attr="pvalue")), sep='')
+            unlist(nodeData(g, attr = "term")),"\nP-value:", 
+            unlist(nodeData(g, attr="pvalue")), sep='')
     } else if (fullNames) {
         nodeLabels = paste(names(unlist(nodeData(g, attr = "term"))), "~",
             unlist(nodeData(g, attr = "term")), sep="")
     } else if (Pvalues) {
-        nodeLabels = paste(names(unlist(nodeData(g, attr = "term"))), "\nP-value: ", unlist(nodeData(g, attr="pvalue")), sep='')
+        nodeLabels = paste(names(unlist(nodeData(g, attr = "term"))), 
+            "\nP-value: ", unlist(nodeData(g, attr="pvalue")), sep='')
     } else {
         nodeLabels = n
     }
@@ -727,18 +737,21 @@ plotRankedZDAG <- function (setA, setB, ont = "BP", n = 100, maxLabel = NULL, fu
         nodeLabels = sapply(nodeLabels, substr, 1L, maxLabel, USE.NAMES= FALSE)
     }
 
-    setU$Term = sub("~.*","",setU$Term)
+    setU$Term   = sub("~.*","",setU$Term)
 
-    nodeColours = ifelse(names(labels) %in% sub("~.*","",overlap), "yellow", ifelse(names(labels) %in% sub("~.*", "", setA$Term), "red",
-        ifelse(names(labels) %in% sub("~.*", "", setB$Term), "lightgreen", "black")))
-    nodeShapes = ifelse(names(labels) %in% sub("~.*", "", overlap), "rectangle", ifelse(names(labels) %in% sub("~.*", "", setA$Term), "rectangle",
-        ifelse(names(labels) %in% sub("~.*", "", setB$Term), "rectangle", "plaintext")))
-    nodeFont = ifelse(names(labels) %in% sub("~.*", "", overlap), 16, ifelse(names(labels) %in% sub("~.*", "", setA$Term), 16,
-        ifelse(names(labels) %in% sub("~.*", "", setB$Term), 16, 0.1)))
-
-    nattr = makeNodeAttrs(g, label = nodeLabels, shape = nodeShapes, fillcolor = nodeColours, fixedsize= FALSE, fontsize=nodeFont)
+    # HSV not implemented in R, I guess.
+    # nodeColours = paste("0.000", ifelse(n %in% setU$Term, 
+    #     round(setU$PValue,3), 1), "1.000", sep=", ")
+    # Ugly Pvalue -> 0:255 -> hex conversion
+    gb = ifelse(n %in% setU$Term, sub(" ", "0", sprintf("%2x", 
+        floor(setU$PValue*255))), "ff")
+    gb = sprintf("%s%s", gb, gb)
+    nodeColours = paste("#ff", gb, sep='')
+    nodeShapes  = "rectangle"
+    nodeFont    = 16
+    nattr = makeNodeAttrs(g, label = nodeLabels, shape = nodeShapes,
+        fillcolor = nodeColours, fixedsize= FALSE, fontsize=nodeFont)
     x <- layoutGraph(g, nodeAttrs = nattr)
     nodeRenderInfo(x) <- list(fontsize=nattr$fontsize)
     renderGraph(x)
-    #plot(g, nodeAttrs = nattr)
 }

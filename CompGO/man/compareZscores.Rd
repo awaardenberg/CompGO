@@ -1,0 +1,42 @@
+\name{compareZscores}
+\alias{compareZscores}
+\title{Compare the Z scores of individual GO terms between two input annotation charts}
+\usage{
+compareZscores(setA, setB, geneInfo = FALSE, cutoff = 10)
+}
+\arguments{
+  \item{setA}{FunctionalAnnotationChart to compare}
+
+  \item{setB}{FunctionalAnnotationChart to compare}
+
+  \item{geneInfo}{Whether to add gene intersection and
+  union info to the data.frame}
+
+  \item{cutoff}{The minimum number of genes to threshold
+  terms by}
+}
+\value{
+A data.frame with columns: Term, Zscore.A, Zscore.B,
+ComparedZ, Pvalue (optionally geneUnion, geneIntersect as
+well, which are comma-separated strings).
+}
+\description{
+Accepts two fnAnot charts as args, does z score and p value
+calculations on them and returns a data.frame with
+important data. A flag, geneInfo, is provided in case the
+user wants to get information about the intersection and
+union of genes corresponding to the individual GO terms.
+Importantly, this function does some implicit thresholding:
+only terms with a minimum of 'cutoff' genes are compared,
+and any term present in one list but not the other is
+discarded.
+}
+\examples{
+data(funChart1)
+data(funChart2)
+cz = compareZscores(funChart1, funChart2)
+str(cz)
+cz = compareZscores(funChart1, funChart2, geneInfo = T)
+str(cz)
+}
+

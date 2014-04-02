@@ -268,8 +268,8 @@ doJACCit <- function(x, it){#it = increment
 # present in one fnAnot chart and not the other.
 # returns data.frame with cols term, z score of first, z score of second,
 # compared z scores, p-value of comparison.
-
 # a flag can also add columns for gene information: genes in setA, genes in setB, intersect.
+
 #' @title Compare the Z scores of individual GO terms between two input annotation charts
 #' @description Accepts two fnAnot charts as args, does z score and p value calculations
 #' on them and returns a data.frame with important data. A flag, geneInfo, is provided
@@ -683,6 +683,24 @@ mergeFnAnotCharts = function(setA, setB) {
     return(setU)
 }
 
+#' @title Plot a directed acyclic graph (DAG) based on the Pvalues generated from
+#' comparing two sets of Z scores. 
+#' @description This function accepts two functional annotation charts as input, performs
+#' a comparison on them using compareZscores() and plots a DAG based on the results. The
+#' saturation of each node is computed based on the Pvalue, such that the more significant
+#' values are darker in colour.
+#' @export
+#' @param setA FunctionalAnnotationChart to compare
+#' @param setB FunctionalAnnotationChart to compare
+#' @param ont The gene ontology category for which to calculate enrichment
+#' @param n The number of top-ranked Pvalues to compare
+#' @param maxLabel The maximum number of characters in a node's label
+#' @param fullNames Whether to print the full GO term label or just the GO id
+#' @param Pvalues Whether to print P-values alongside each label
+#' @examples
+#' data(funChart1)
+#' data(funChart2)
+#' plotZRankedDAG(funChart1, funChart2, n = 50)
 plotZRankedDAG <- function (setA, setB, ont = "BP", n = 100, maxLabel = NULL, 
     fullNames = TRUE, Pvalues = TRUE) {
     # Wish to plot DAG based on Z score comparisons (P-values thereof)
@@ -691,9 +709,6 @@ plotZRankedDAG <- function (setA, setB, ont = "BP", n = 100, maxLabel = NULL,
     # In this case, since DAVID needs an fnAnot chart, maybe cut down one of the input
     # sets to those returned by the comparison function and replace the relevant info with
     # that which has been generated?
-
-    # in this case, we don't need any of the code below (except maybe if we want to increase
-    # saturation with P-value). We can just use davidGODag() then plotGOTermGraph().
 
     compared = compareZscores(setA, setB, geneInfo=T)
     compared = compared[order(compared$Pvalue),]

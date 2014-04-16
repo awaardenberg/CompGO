@@ -32,12 +32,22 @@
 #' @export
 #' @return Output from pathview: a list of 2, plot.data.gene and plot.data.cpd
 #' @examples
-#' 
+#' \notrun{
+#' # Since this function requires writing to a directory, it won't be run here
+#' data(funChart1)
+#' data(funChart2)
+#' viewKegg(funChart1, funChart2)
+#'}
 viewKegg <- function(setA, setB, keggTerm = NULL, species = NULL, workingDir = NULL, ...) {
+    i = sapply(setA, is.factor)
+    setA[i] = lapply(setA[i], as.character)
+    i = sapply(setB, is.factor)
+    setB[i] = lapply(setB[i], as.character)
+
     setA = subset(setA, setA$Category == "KEGG_PATHWAY")
     setB = subset(setB, setB$Category == "KEGG_PATHWAY")
 
-    z.comp = compareZscores(setA, setB)
+    z.comp = compareZscores(setA, setB, cutoff = 10)
     # sort by absolute difference
     z.comp = z.comp[with(z.comp, order(-abs(ComparedZ))), ]
 
@@ -350,11 +360,6 @@ doJACCit <- function(x, it){#it = increment
     }
     return(matrix.jacc)#return the matrix for plotting
 }#end of function
-
-######################
-## More from Ash
-## 26/03/14
-######################
 
 # function wants pre-merged table, i.e. two fnAnot charts merged on "Term"
 # accept two fnAnot charts as args instead

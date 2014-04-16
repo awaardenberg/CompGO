@@ -56,6 +56,7 @@ annotateBedFromDb <- function(pathToBed = NULL, gRanges = NULL, db = NULL, windo
 #' @param background If you want to perform enrichment against a specific background instead DAVID's default (whole genome), supply it here
 #' @param bgIdType If the background gene ID type is different from the gene list, enter it here
 #' @param bgListName If you want to give the background a name, enter it here
+#' @param getKEGG 
 #' @return Returns a DAVIDFunctionalAnnotationChart after generating it by comparing the supplied gene list to the full
 #'      genome as a background
 #' @examples
@@ -70,7 +71,9 @@ annotateBedFromDb <- function(pathToBed = NULL, gRanges = NULL, db = NULL, windo
 #' david = DAVIDWebService$new(email = "your.registered@@email.com")
 #' fnAnot = getFnAnot_genome(entrezList, david = david)
 #' }
-getFnAnot_genome <- function(geneList, david = NULL, email = NULL, idType = "ENTREZ_GENE_ID", listName = "auto_list", count = 1L, PVal = 1, background = NULL, bgIdType = NULL, bgListName = NULL) {
+getFnAnot_genome <- function(geneList, david = NULL, email = NULL, 
+    idType = "ENTREZ_GENE_ID", listName = "auto_list", count = 1L, PVal = 1, 
+    background = NULL, bgIdType = NULL, bgListName = NULL, getKEGG = FALSE) {
     if (is.null(david) && !is.null(email)) {
         david <- RDAVIDWebService::DAVIDWebService$new(email = email)
     }
@@ -82,15 +85,22 @@ getFnAnot_genome <- function(geneList, david = NULL, email = NULL, idType = "ENT
     }
     message("uploading gene list...")
     addList(david, geneList, idType=idType, listType = "Gene", listName = listName)
-    setAnnotationCategories(david, c("GOTERM_BP_ALL", "GOTERM_MF_ALL", "GOTERM_CC_ALL"))
+    if(getKEGG) {
+        setAnnotationCategories(david, c("GOTERM_BP_ALL", "GOTERM_MF_ALL", 
+            "GOTERM_CC_ALL", "KEGG_PATHWAY"))
+    } else {
+        setAnnotationCategories(david, c("GOTERM_BP_ALL", "GOTERM_MF_ALL", "GOTERM_CC_ALL"))
+    }
     if (is.null(background)) {
 # to ensure genome-wide comparison
         setCurrentBackgroundPosition(david, 1)
     } else {
         message("uploading background...")
-        addList(david, background, idType = ifelse(is.null(bgIdType), idType, bgIdType), listName = ifelse(is.null(bgListName), "auto_bg", bgListName), listType = "Background")
+        addList(david, background, idType = ifelse(is.null(bgIdType), idType, bgIdType),
+            listName = ifelse(is.null(bgListName), "auto_bg", bgListName),
+            listType = "Background")
     }
-
+    message("Done uploading. Downloading fnAnot_chart...")
     fnAnot <- getFunctionalAnnotationChart(david, threshold=PVal, count=count)
     return(fnAnot)
 }
@@ -164,8 +174,6 @@ zTransformDirectory <- function(inputDir, cutoff=NULL, pattern = NULL, removeNA=
 
     return(z.merge)
 }
-
-# TODO: return.full : substitute DAVID p-value for z-score derived p-value.
 
 #' @title Z transform a single functional annotation chart from DAVID
 #' @description Decomposes each GO term in a functional annotation chart (returned from getFnAnot_genome()) to its Z-score. These tables can be merged for clustering
@@ -483,7 +491,8 @@ plotZScores <- function(setA, setB, cutoff = NULL, plotNA = FALSE, model='lm') {
 #' data(funChart1)
 #' data(funChart2)
 #' plotPairwise(funChart1, funChart2)
-plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, plotNA= TRUE, model='lm', ontology=NULL) {
+plotPairwise <- function(setA, setB, cutoff = NULL, useRawPvals = FALSE, 
+    plotNA= TRUE, model='lm', ontology=NULL) {
     if(!is.null(ontology)) {
         if(ontology %in% c("BP", "MF", "CC")) {
             setA = subOntology(setA, ontology)
@@ -586,6 +595,13 @@ extractGOFromAnnotation <- function(fnAnot) {
     #fnAnot = subset(fnAnot, select=-Genes)
     fnAnot$Term = sapply(fnAnot$Term, function(x) {
         sub("(GO:[^~]+)~.*$","\\1", x)
+    })
+    return(fnAnot)
+}
+
+extractKEGGFromAnnotation <- function(fnAnot) {
+    fnAnot$Term = sapply(fnAnot$Term, function(x) {
+        sub("([^:]+):.*$", "\\1", x)
     })
     return(fnAnot)
 }

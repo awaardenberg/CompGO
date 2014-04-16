@@ -1,6 +1,92 @@
 # R pipeline for GO analysis and comparison
 # by Sam Bassett and Ash Waardenberg, VCCRI, 2014
 
+######################################
+### KEGG PATHWAY BEGINS 16/04/2014 ###
+######################################
+
+# Pathview can do what we need it to. However, it needs one pathway at a time to visualise.
+# Maybe it either needs to be interactive, or pick the most enriched one?
+
+# Problem is, pathview wants a list of differentially expressed GENES. We have a list of 
+# differentially expressed GO TERMS. 
+# Maybe iterate over both gene lists, give 1, 0, -1 to genes if in setA, both, setB?
+
+#' @title Compare KEGG pathways between two functional annotation charts
+#' @description viewKegg uses pathview to compare the gene lists visually by KEGG pathway.
+#' You can either supply a pathway id or the function will pick the most differentially 
+#' enriched pathway between the two inputs. As functional annotation charts don't have 
+#' differential gene expression information, a boolean scale is used - genes in the pathway
+#' are coloured green if from setA, yellow if from both, and red if from setB. We recommend
+#' you supply a working directory, as pathview will download an XML and PNG file as well
+#' as output an additional PNG of the pathway. 
+#' @param setA FunctionalAnnotationChart to compare
+#' @param setB FunctionalAnnotationChart to compare
+#' @param keggTerm If a specific KEGG pathway is of interest, input the name here; otherwise,
+#' the most differentially expressed pathway will be used.
+#' @param species The program can usually figure out the species from the KEGG terms, but if
+#' it can't, supply the species ID here. From pathview vignette, run data(bods); bods to find
+#' species codes.
+#' @param workingDir The directory to output into. Recommended, since pathview 
+#' will put a few different files there each time.
+#' @export
+#' @return Output from pathview: a list of 2, plot.data.gene and plot.data.cpd
+#' @examples
+#' 
+viewKegg <- function(setA, setB, keggTerm = NULL, species = NULL, workingDir = NULL, ...) {
+    setA = subset(setA, setA$Category == "KEGG_PATHWAY")
+    setB = subset(setB, setB$Category == "KEGG_PATHWAY")
+
+    z.comp = compareZscores(setA, setB)
+    # sort by absolute difference
+    z.comp = z.comp[with(z.comp, order(-abs(ComparedZ))), ]
+
+    if(nrow(z.comp) < 1)
+        stop("No common KEGG pathways")
+
+    if(is.null(keggTerm)) {
+        # Pick first common one
+        #keggTerm = intersect(setA$Term, setB$Term)[1]
+        keggTerm = z.comp[1,]$Term
+    }
+    # Convert from DAVID (KEGG_ID:KEGG_DESCRIPTION) to KEGG_ID only
+    keggTerm = sub("([^:]+):.*$", "\\1", keggTerm)
+    setA$Term = sub("([^:]+):.*$", "\\1", setA$Term)
+    setB$Term = sub("([^:]+):.*$", "\\1", setB$Term)
+    setA = subset(setA, setA$Term == keggTerm)
+    setB = subset(setB, setB$Term == keggTerm)
+
+    if(nrow(setA) != 1 || nrow(setB) != 1) {
+        stop(paste("Couldn't find matching kegg term for", keggTerm, sep=' '))
+    }
+    genesA = unlist(strsplit(setA$Genes, ', '))
+    genesB = unlist(strsplit(setB$Genes, ', '))
+    allGenes = union(genesA, genesB)
+    expressions = sapply(allGenes, function(x, genesA, genesB) {
+            if(x %in% genesA && x %in% genesB) {
+                return(0)
+            } else if (x %in% genesA) {
+                return(1)
+            } else {
+                return(-1)
+            }
+        }, genesA, genesB)
+    
+    if(is.null(species)) {
+        species = substr(keggTerm, 0, 3)
+    }
+    if(!is.null(workingDir)) {
+        currDir = getwd()
+        setwd(workingDir)
+    }
+    pv.out = pathview(gene.data = expressions, pathway.id = keggTerm,
+        species = species, kegg.native=T, mid = list(gene = "yellow", cpd="grey"), ...)
+    if(!is.null(workingDir)) {
+        setwd(currDir)
+    }
+    return(pv.out)
+}
+
 #' @title Annotate .bed file to genes
 #' @description Wrapper for transcriptsByOverlaps(). Returns a GRanges with the gene and transcript ids associated with the input .bed regions. Sometimes it is necessary to expand the search window a bit, because not all .bed regions directly overlap with a transcription start site, so the 'window' parameter is provided to accomplish this.
 #' @param pathToBed The system path to a .bed file (directory + file name)

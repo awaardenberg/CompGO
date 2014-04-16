@@ -21,5 +21,6 @@ Imports:
     Rgraphviz,
     ggplot2,
     GenomicFeatures,
-    TxDb.Mmusculus.UCSC.mm9.knownGene
+    TxDb.Mmusculus.UCSC.mm9.knownGene,
+    pathview
 biocViews: GeneSetEnrichment, MultipleComparison, GO, Visualization

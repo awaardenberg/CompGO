@@ -1,9 +1,6 @@
 # R pipeline for GO analysis and comparison
 # by Sam Bassett and Ash Waardenberg, VCCRI, 2014
 
-# TODO: revisit Zscore DAG, test ggplot2 1.0.0, implement interactive plotting function: PCA 
-# and heirarchical clustering from input list of genes.
-
 ######################################
 ### KEGG PATHWAY BEGINS 16/04/2014 ###
 ######################################
@@ -103,6 +100,99 @@ viewKegg <- function(setA, setB, keggTerm = NULL, species = NULL, workingDir = N
     }
     print(head(z.comp))
     return(pv.out)
+}
+
+# TODO: Still to come is debugging
+
+#' @title Interactive plotting function for groups of GO terms
+#' @description Given a list of functional annotation charts and optionally an 
+#' output directory, this function can output dendrograms, PCA analysis plots and a
+#' correlation matrix to make large-scale comparisons easy.
+#' @param input A list of functional annotation charts.
+#' @param outDir The directory to save plots to.
+#' @param prefix The prefix to append to each file, if any.
+#' @param pdf If true, plots will be pdfs. If false, pngs.
+#' @export
+plotInteractive <- function(input, outDir = NULL, prefix = NULL, pdf = TRUE) {
+    if(class(input) != "list")
+        stop("input must be of type list")
+    stdin = file('stdin')
+    on.exit(close(stdin))
+    if (is.null(outDir)) {
+        message("Where would you like to output the plots?")
+        wd = getwd()
+        on.exit(setwd(wd))
+        newDir = readLines(stdin, 1)
+        if(file.exists(newDir)) {
+            setwd(newDir)
+        } else {
+            message(paste(newDir, "doesn't exist, create it? [YN]"))
+            resp = readLines(file('stdin'), 1)
+            if(grepl("[Yy](es)*", resp)) {
+                dir.create(newDir)
+                setwd(newDir)
+            } else {
+                setwd(wd)
+                return
+            }
+        }
+    }
+
+    # We now want to iterate through the list given as input, do Z score comparisons
+    z.merge = matrix()
+    for(i in 1:length(input)) {
+        if (i == 1) {
+            z.merge = doZtrans.single(input[[i]])
+        } else {
+            z.merge.add = doZtrans.single(input[[i]])
+            z.merge = merge(z.merge, z.merge.add, by="row.names")
+        }
+        
+    }
+    x = z.merge[2:(ncol(z.merge)-1)]
+    browser()
+    while(TRUE) {
+        message("What would you like to do?\n\n1. Plot a dendrogram")
+        message("2. Plot PCA\n3. Plot a correlation matrix\n4. Exit")
+        sel = readLines(file('stdin'), 1)
+        if(pdf) {
+            pdf(paste(prefix, sample(1:999999, 1), ".pdf", sep=''))
+        } else {
+            png(paste(prefix, sample(1:999999, 1), ".png", sep=''))
+        }
+        if(sel == 1) {
+            par(mfrow=c(1,1))
+            dis <- cor(abs(x), method="pearson")
+            dist.cor <- hclust(dist(1-dis), method="complete")
+            plot(dist.cor)
+        } else if (sel == 2) {
+            pc <- pca(t(x), method="svd", center=TRUE, nPcs=ncol(x)-1)
+            #calculate variance explained by first 3 components:
+            var1.2 <- R2cum(pc)[2]*100
+            var2.3 <- ((R2cum(pc)[3]-R2cum(pc)[2])+(R2cum(pc)[2]-R2cum(pc)[1]))*100
+            var1.3 <- (R2cum(pc)[1]+(R2cum(pc)[3]-R2cum(pc)[2]))*100
+            pc.scores <- as.data.frame(scores(pc))
+
+            par(mfrow=c(2,2))
+            plot(pc.scores[,1], pc.scores[,2], xlab="PC 1", ylab="PC 2", sub=paste(var1.2, "% of the variance explained", sep=""), main="PC 1 vs. PC 2")
+            text(pc.scores[,1], pc.scores[,2], colnames(x), cex=0.6, pos=4, col="red")
+            plot(pc.scores[,2], pc.scores[,3], xlab="PC 2", ylab="PC 3", sub=paste(var2.3, "% of the variance explained", sep=""), main="PC 2 vs. PC 3")
+            text(pc.scores[,2], pc.scores[,3], colnames(x), cex=0.6, pos=4, col="red")
+            plot(pc.scores[,1], pc.scores[,3], xlab="PC 1", ylab="PC 3", sub=paste(var1.3, "% of the variance explained", sep=""), main="PC 1 vs. PC 3")
+            text(pc.scores[,1], pc.scores[,3], colnames(x), cex=0.6, pos=4, col="red")
+            plot(pc, main="Cumulative Variance")
+        } else if (sel == 3) {
+            par(mfrow=c(1,1))
+            x.transform=melt(cor(abs(x)), id=1)#
+            qplot(x=Var1, y=Var2, data=melt(cor(x), id=1), fill=value, geom="tile")
+        } else if (sel == 4) {
+            break
+        } else {
+            message("Invalid selection.")
+        }
+        dev.off()
+    }
+    setwd(wd)
 }
 
 #' @title Annotate .bed file to genes

@@ -22,5 +22,7 @@ Imports:
     ggplot2,
     GenomicFeatures,
     TxDb.Mmusculus.UCSC.mm9.knownGene,
+    pcaMethods,
+    reshape2,
     pathview
 biocViews: GeneSetEnrichment, MultipleComparison, GO, Visualization

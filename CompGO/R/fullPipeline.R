@@ -1,16 +1,12 @@
 # R pipeline for GO analysis and comparison
 # by Sam Bassett and Ash Waardenberg, VCCRI, 2014
 
+# TODO: revisit Zscore DAG, test ggplot2 1.0.0, implement interactive plotting function: PCA 
+# and heirarchical clustering from input list of genes.
+
 ######################################
 ### KEGG PATHWAY BEGINS 16/04/2014 ###
 ######################################
-
-# Pathview can do what we need it to. However, it needs one pathway at a time to visualise.
-# Maybe it either needs to be interactive, or pick the most enriched one?
-
-# Problem is, pathview wants a list of differentially expressed GENES. We have a list of 
-# differentially expressed GO TERMS. 
-# Maybe iterate over both gene lists, give 1, 0, -1 to genes if in setA, both, setB?
 
 #' @title Compare KEGG pathways between two functional annotation charts
 #' @description viewKegg uses pathview to compare the gene lists visually by KEGG pathway.
@@ -25,10 +21,12 @@
 #' @param keggTerm If a specific KEGG pathway is of interest, input the name here; otherwise,
 #' the most differentially expressed pathway will be used.
 #' @param species The program can usually figure out the species from the KEGG terms, but if
-#' it can't, supply the species ID here. From pathview vignette, run data(bods); bods to find
-#' species codes.
+#' it can't, supply the species ID here. From pathview vignette, 
+#' run 'data(bods); bods' to find species codes.
 #' @param workingDir The directory to output into. Recommended, since pathview 
 #' will put a few different files there each time.
+#' @param sortByCount Set TRUE if you want the function to automatically choose the pathway
+#' with the most number of genes
 #' @export
 #' @return Output from pathview: a list of 2, plot.data.gene and plot.data.cpd
 #' @examples
@@ -37,8 +35,11 @@
 #' data(funChart1)
 #' data(funChart2)
 #' viewKegg(funChart1, funChart2)
-#'}
-viewKegg <- function(setA, setB, keggTerm = NULL, species = NULL, workingDir = NULL, ...) {
+#' }
+viewKegg <- function(setA, setB, keggTerm = NULL, species = NULL, workingDir = NULL,
+    sortByCount = FALSE, ...) {
+    nameA = deparse(substitute(setA))
+    nameB = deparse(substitute(setB))
     i = sapply(setA, is.factor)
     setA[i] = lapply(setA[i], as.character)
     i = sapply(setB, is.factor)
@@ -47,7 +48,8 @@ viewKegg <- function(setA, setB, keggTerm = NULL, species = NULL, workingDir = N
     setA = subset(setA, setA$Category == "KEGG_PATHWAY")
     setB = subset(setB, setB$Category == "KEGG_PATHWAY")
 
-    z.comp = compareZscores(setA, setB, cutoff = 10)
+    # one common and at least 4 each seems to work well
+    z.comp = compareZscores(setA, setB, cutoff = 5)
     # sort by absolute difference
     z.comp = z.comp[with(z.comp, order(-abs(ComparedZ))), ]
 
@@ -55,9 +57,13 @@ viewKegg <- function(setA, setB, keggTerm = NULL, species = NULL, workingDir = N
         stop("No common KEGG pathways")
 
     if(is.null(keggTerm)) {
-        # Pick first common one
-        #keggTerm = intersect(setA$Term, setB$Term)[1]
-        keggTerm = z.comp[1,]$Term
+        if(sortByCount) {
+            setA = setA[with(setA, order(-Count)), ]
+            setB = setB[with(setB, order(-Count)), ]
+            keggTerm = intersect(setA$Term, setB$Term)[1]
+        } else {
+            keggTerm = z.comp[1,]$Term
+        }
     }
     # Convert from DAVID (KEGG_ID:KEGG_DESCRIPTION) to KEGG_ID only
     keggTerm = sub("([^:]+):.*$", "\\1", keggTerm)
@@ -76,9 +82,9 @@ viewKegg <- function(setA, setB, keggTerm = NULL, species = NULL, workingDir = N
             if(x %in% genesA && x %in% genesB) {
                 return(0)
             } else if (x %in% genesA) {
-                return(1)
-            } else {
                 return(-1)
+            } else {
+                return(1)
             }
         }, genesA, genesB)
     
@@ -90,10 +96,12 @@ viewKegg <- function(setA, setB, keggTerm = NULL, species = NULL, workingDir = N
         setwd(workingDir)
     }
     pv.out = pathview(gene.data = expressions, pathway.id = keggTerm,
-        species = species, kegg.native=T, mid = list(gene = "yellow", cpd="grey"), ...)
+        species = species, kegg.native=T, mid = list(gene = "yellow", cpd="grey"),
+        out.suffix = paste(nameA, nameB, sep='.'), ...)
     if(!is.null(workingDir)) {
         setwd(currDir)
     }
+    print(head(z.comp))
     return(pv.out)
 }
 
@@ -300,6 +308,7 @@ doZtrans.single <- function(x, name) {
     return(df)
 }
 
+# TODO: may cut off column. Revisit.
 doZtrans.merge <- function(setA, setB) {
     nameA = deparse(substitute(setA))
     nameB = deparse(substitute(setB))
@@ -406,12 +415,14 @@ compareZscores <- function(setA, setB, geneInfo = FALSE, cutoff = 10) {
     # zscores
     zscores = (log(or.x) - log(or.y))/sqrt((ster.x)^2 + (ster.y)^2)
     z.pvals = 2*pnorm(-abs(zscores))
+    z.pv.adj= p.adjust(z.pvals, method="fdr")
     z.x     = log(or.x)/ster.x
     z.y     = log(or.y)/ster.y
     # merge into data.frame
     if(!geneInfo) {
         result = data.frame("Term" = mt$Term, "Zscore.A" = z.x, 
-            "Zscore.B" = z.y, "ComparedZ" = zscores, "Pvalue" = z.pvals)
+            "Zscore.B" = z.y, "ComparedZ" = zscores,
+            "Pvalue" = z.pvals, "PvalueAdj" = z.pv.adj)
     } else {
         # tricky gene stuff follows
         # gets comma-separated genes as vector of strings,
@@ -790,7 +801,7 @@ mergeFnAnotCharts = function(setA, setB) {
     return(setU)
 }
 
-#' @title Plot a directed acyclic graph (DAG) based on the Pvalues generated from
+#' @title Plot a directed acyclic graph (DAG) based on the corrected Pvalues generated from
 #' comparing two sets of Z scores. 
 #' @description This function accepts two functional annotation charts as input, performs
 #' a comparison on them using compareZscores() and plots a DAG based on the results. The
@@ -822,7 +833,7 @@ plotZRankedDAG <- function (setA, setB, ont = "BP", n = 100, maxLabel = NULL,
     compared = compared[1:n,]
     setU = setA
     setU = subset(setU, setU$Term %in% compared$Term)
-    setU$PValue = compared$Pvalue
+    setU$PValue = compared$PvalueAdj
     setU$Genes = compared$geneUnion
 
     setU = DAVIDFunctionalAnnotationChart(setU)

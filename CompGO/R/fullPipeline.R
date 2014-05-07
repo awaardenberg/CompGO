@@ -24,10 +24,11 @@
 #' will put a few different files there each time.
 #' @param sortByCount Set TRUE if you want the function to automatically choose the pathway
 #' with the most number of genes
+#' @param ... Arguments to be passed to pathview
 #' @export
 #' @return Output from pathview: a list of 2, plot.data.gene and plot.data.cpd
 #' @examples
-#' \notrun{
+#' \dontrun{
 #' # Since this function requires writing to a directory, it won't be run here
 #' data(funChart1)
 #' data(funChart2)
@@ -118,16 +119,18 @@ plotInteractive <- function(input, outDir = NULL, prefix = NULL, pdf = TRUE) {
         stop("input must be of type list")
     stdin = file('stdin')
     on.exit(close(stdin))
+
+    wd = getwd()
+    on.exit(setwd(wd))
+
     if (is.null(outDir)) {
         message("Where would you like to output the plots?")
-        wd = getwd()
-        on.exit(setwd(wd))
         newDir = readLines(stdin, 1)
         if(file.exists(newDir)) {
             setwd(newDir)
         } else {
             message(paste(newDir, "doesn't exist, create it? [YN]"))
-            resp = readLines(file('stdin'), 1)
+            resp = readLines(stdin, 1)
             if(grepl("[Yy](es)*", resp)) {
                 dir.create(newDir)
                 setwd(newDir)
@@ -136,35 +139,43 @@ plotInteractive <- function(input, outDir = NULL, prefix = NULL, pdf = TRUE) {
                 return
             }
         }
+    } else {
+        setwd(outDir)
     }
 
     # We now want to iterate through the list given as input, do Z score comparisons
     z.merge = matrix()
     for(i in 1:length(input)) {
         if (i == 1) {
-            z.merge = doZtrans.single(input[[i]])
+            z.merge = doZtrans.single(input[[i]], name=names(input)[i])
         } else {
-            z.merge.add = doZtrans.single(input[[i]])
+            z.merge.add = doZtrans.single(input[[i]], name=names(input)[i])
             z.merge = merge(z.merge, z.merge.add, by="row.names")
+            row.names(z.merge) = z.merge$Row.names
+            z.merge = z.merge[,-1]
         }
         
     }
-    x = z.merge[2:(ncol(z.merge)-1)]
-    browser()
+    #TODO: rename all x -> z.merge below
+    x = z.merge
+    id = sample(1:999999, 1)
+
     while(TRUE) {
         message("What would you like to do?\n\n1. Plot a dendrogram")
         message("2. Plot PCA\n3. Plot a correlation matrix\n4. Exit")
-        sel = readLines(file('stdin'), 1)
-        if(pdf) {
-            pdf(paste(prefix, sample(1:999999, 1), ".pdf", sep=''))
-        } else {
-            png(paste(prefix, sample(1:999999, 1), ".png", sep=''))
-        }
+        sel = readLines(stdin, 1)
         if(sel == 1) {
-            par(mfrow=c(1,1))
             dis <- cor(abs(x), method="pearson")
             dist.cor <- hclust(dist(1-dis), method="complete")
+            if(pdf) {
+                pdf(paste(prefix, id, "-dendro", ".pdf", sep=''))
+            } else {
+                png(paste(prefix, id, "-dendro", ".png", sep=''))
+            }
+            par(mfrow=c(1,1))
             plot(dist.cor)
+            dev.off()
+            message(paste("Saved to ", prefix, id, "-dendro\n", sep=''))
         } else if (sel == 2) {
             pc <- pca(t(x), method="svd", center=TRUE, nPcs=ncol(x)-1)
             #calculate variance explained by first 3 components:
@@ -172,6 +183,12 @@ plotInteractive <- function(input, outDir = NULL, prefix = NULL, pdf = TRUE) {
             var2.3 <- ((R2cum(pc)[3]-R2cum(pc)[2])+(R2cum(pc)[2]-R2cum(pc)[1]))*100
             var1.3 <- (R2cum(pc)[1]+(R2cum(pc)[3]-R2cum(pc)[2]))*100
             pc.scores <- as.data.frame(scores(pc))
+            
+            if(pdf) {
+                pdf(paste(prefix, id, "-pca", ".pdf", sep=''))
+            } else {
+                png(paste(prefix, id, "-pca", ".png", sep=''))
+            }
 
             par(mfrow=c(2,2))
             plot(pc.scores[,1], pc.scores[,2], xlab="PC 1", ylab="PC 2", sub=paste(var1.2, "% of the variance explained", sep=""), main="PC 1 vs. PC 2")
@@ -181,17 +198,26 @@ plotInteractive <- function(input, outDir = NULL, prefix = NULL, pdf = TRUE) {
             plot(pc.scores[,1], pc.scores[,3], xlab="PC 1", ylab="PC 3", sub=paste(var1.3, "% of the variance explained", sep=""), main="PC 1 vs. PC 3")
             text(pc.scores[,1], pc.scores[,3], colnames(x), cex=0.6, pos=4, col="red")
             plot(pc, main="Cumulative Variance")
+            dev.off()
+            message(paste("Saved to ", prefix, id, "-pca\n", sep=''))
         } else if (sel == 3) {
-            par(mfrow=c(1,1))
-            x.transform=melt(cor(abs(x)), id=1)#
-            qplot(x=Var1, y=Var2, data=melt(cor(x), id=1), fill=value, geom="tile")
+            if(pdf) {
+                pdf(paste(prefix, id, "-cor", ".pdf", sep=''))
+            } else {
+                png(paste(prefix, id, "-cor", ".png", sep=''))
+            }
+            par(mfrow=c(1,1))          
+            dt = melt(cor(x), id=1)
+            g = ggplot(dt, aes(Var1, Var2)) + geom_tile(aes(fill=value))
+            plot(g)
+            dev.off()
+            message(paste("Saved to ", prefix, id, "-cor\n", sep=''))
         } else if (sel == 4) {
             break
         } else {
             message("Invalid selection.")
         }
-        dev.off()
-    }
+    }    
     setwd(wd)
 }
 
@@ -250,7 +276,7 @@ annotateBedFromDb <- function(pathToBed = NULL, gRanges = NULL, db = NULL, windo
 #' @param background If you want to perform enrichment against a specific background instead DAVID's default (whole genome), supply it here
 #' @param bgIdType If the background gene ID type is different from the gene list, enter it here
 #' @param bgListName If you want to give the background a name, enter it here
-#' @param getKEGG 
+#' @param getKEGG TRUE if you want to download KEGG pathway information as well as GO
 #' @return Returns a DAVIDFunctionalAnnotationChart after generating it by comparing the supplied gene list to the full
 #'      genome as a background
 #' @examples
@@ -487,11 +513,15 @@ doJACCit <- function(x, it){#it = increment
 #' data(funChart2)
 #' cz = compareZscores(funChart1, funChart2)
 #' str(cz)
-#' cz = compareZscores(funChart1, funChart2, geneInfo = T)
+#' cz = compareZscores(funChart1, funChart2, geneInfo = TRUE)
 #' str(cz)
 compareZscores <- function(setA, setB, geneInfo = FALSE, cutoff = 10) {
     if(!"Term" %in% names(setA) | !"Term" %in% names(setB))
         stop("Please supply valid functional annotation charts as arguments")
+    i = sapply(setA, is.factor)
+    setA[i] = lapply(setA[i], as.character)
+    i = sapply(setB, is.factor)
+    setB[i] = lapply(setB[i], as.character)
     setA = subset(setA, setA$Count >= cutoff)
     setB = subset(setB, setB$Count >= cutoff)
     # merged table
@@ -906,9 +936,11 @@ mergeFnAnotCharts = function(setA, setB) {
 #' @param fullNames Whether to print the full GO term label or just the GO id
 #' @param Pvalues Whether to print P-values alongside each label
 #' @examples
+#' \dontrun{
 #' data(funChart1)
 #' data(funChart2)
 #' plotZRankedDAG(funChart1, funChart2, n = 50)
+#' }
 plotZRankedDAG <- function (setA, setB, ont = "BP", n = 100, maxLabel = NULL, 
     fullNames = TRUE, Pvalues = TRUE) {
     # Wish to plot DAG based on Z score comparisons (P-values thereof)

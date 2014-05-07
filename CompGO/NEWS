@@ -1,0 +1,19 @@
+TODO:
+* checking whether package ‘CompGO’ can be installed ... WARNING
+Found the following significant warnings:
+Warning: package ‘GenomicFeatures’ was built under R version 3.0.3
+Warning: package ‘GenomicFeatures’ was built under R version 3.0.3
+
+* checking R code for possible problems ... NOTE
+doZtrans.single: no visible binding for global variable ‘Z’
+plotInteractive: no visible binding for global variable ‘Var1’
+plotInteractive: no visible binding for global variable ‘Var2’
+plotInteractive: no visible binding for global variable ‘value’
+slidingJaccard: no visible binding for global variable ‘useRawPvals’
+
+* checking for missing documentation entries ... WARNING
+Undocumented data sets:
+  ‘bed.sample’
+All user-level objects in a package should have documentation entries.
+See the chapter ‘Writing R documentation files’ in the ‘Writing R
+Extensions’ manual.

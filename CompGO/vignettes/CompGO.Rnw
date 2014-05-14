@@ -56,10 +56,6 @@ Once we have this annotated GRanges object, we can derive a list of genes to que
 # to illustrate the utility of this package:
 data(funChart1)
 data(funChart2)
-funChart1 = subset(funChart1, Category %in%
-    c("GOTERM_BP_ALL", "GOTERM_MF_ALL", "GOTERM_CC_ALL"))
-funChart2 = subset(funChart2, Category %in%
-    c("GOTERM_BP_ALL", "GOTERM_MF_ALL", "GOTERM_CC_ALL"))
 str(funChart1)
 # once the charts have been retrieved, they can be written
 # to disk for subsequent batch processing like so:

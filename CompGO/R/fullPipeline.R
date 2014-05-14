@@ -99,11 +99,9 @@ viewKegg <- function(setA, setB, keggTerm = NULL, species = NULL, workingDir = N
     if(!is.null(workingDir)) {
         setwd(currDir)
     }
-    print(head(z.comp))
+    messages(head(z.comp))
     return(pv.out)
 }
-
-# TODO: Still to come is debugging
 
 #' @title Interactive plotting function for groups of GO terms
 #' @description Given a list of functional annotation charts and optionally an 

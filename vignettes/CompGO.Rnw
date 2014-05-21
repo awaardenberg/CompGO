@@ -153,11 +153,21 @@ plotZScores(p300.fnAnot, mef2a.fnAnot)
 \begin{figure}
 \begin{center}
 <<label=fig5,fig=TRUE>>=
-
+plotZRankedDAG(nkx25.fnAnot, mef2a.fnAnot, ont="MF", n=50)
 @
 \end{center}
-\caption{p300 against Mef2a, two of the more different sets. Interestingly, the Jaccard coefficient between these two sets is marginally higher than before, but the overall correlation is reduced to 0.38.}
+\caption{Significant differences between Nkx2.5 and Mef2a in molecular function.}
 \label{fig:five}
+\end{figure}
+
+\begin{figure}
+\begin{center}
+<<label=fig6,fig=TRUE>>=
+plotZRankedDAG(p300.fnAnot, mef2a.fnAnot, ont="MF", n=50)
+@
+\end{center}
+\caption{Significant differences between p300 and Mef2a in molecular function.}
+\label{fig:six}
 \end{figure}
 
 

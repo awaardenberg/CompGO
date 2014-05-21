@@ -612,7 +612,7 @@ compareZscores <- function(setA, setB, geneInfo = FALSE, cutoff = 10) {
         u = lapply(u, paste, collapse = ", ")
         result = data.frame("Term" = mt$Term, "Zscore.A" = z.x, 
             "Zscore.B" = z.y, "ComparedZ" = zscores, "Pvalue" = z.pvals, 
-            "geneUnion" = unlist(u), "geneIntersect" = unlist(n))
+            "PvalueAdj" = z.pv.adj, "geneUnion" = unlist(u), "geneIntersect" = unlist(n))
     }
     return(result)
 }
@@ -1003,7 +1003,7 @@ plotZRankedDAG <- function (setA, setB, ont = "BP", n = 100, maxLabel = NULL,
     compared = compared[1:n,]
     setU = setA
     setU = subset(setU, setU$Term %in% compared$Term)
-    setU$PValue = compared$PvalueAdj
+    setU$PValue = compared$Pvalue
     setU$Genes = compared$geneUnion
 
     setU = DAVIDFunctionalAnnotationChart(setU)

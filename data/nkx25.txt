@@ -1,4 +1,4 @@
-"chromosome" "gene.start" "gene.end"
+"chromosome" "start" "end"
 "7409" "chr16" 5195385 5204092
 "7512" "chr16" 11313901 11320161
 "8933" "chr17" 66132755 66191186

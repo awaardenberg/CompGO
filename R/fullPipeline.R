@@ -221,6 +221,54 @@ plotInteractive <- function(input, outDir = NULL, prefix = NULL, pdf = TRUE) {
     setwd(wd)
 }
 
+plotDendrogram <- function(input) {
+    z.merge = matrix()
+    for(i in 1:length(input)) {
+        if (i == 1) {
+            z.merge = doZtrans.single(input[[i]], name=names(input)[i])
+        } else {
+            z.merge.add = doZtrans.single(input[[i]], name=names(input)[i])
+            z.merge = merge(z.merge, z.merge.add, by="row.names")
+            row.names(z.merge) = z.merge$Row.names
+            z.merge = z.merge[,-1]
+        }   
+    }
+    x = z.merge
+    dis <- cor(abs(x), method="pearson")
+    dist.cor <- hclust(dist(1-dis), method="complete")
+    plot(dist.cor)  
+}
+
+plotPCA <-function(input) {
+    z.merge = matrix()
+    for(i in 1:length(input)) {
+        if (i == 1) {
+            z.merge = doZtrans.single(input[[i]], name=names(input)[i])
+        } else {
+            z.merge.add = doZtrans.single(input[[i]], name=names(input)[i])
+            z.merge = merge(z.merge, z.merge.add, by="row.names")
+            row.names(z.merge) = z.merge$Row.names
+            z.merge = z.merge[,-1]
+        }
+    }
+    x = z.merge
+    pc <- pca(t(x), method="svd", center=TRUE, nPcs=ncol(x)-1)
+    #calculate variance explained by first 3 components:
+    var1.2 <- R2cum(pc)[2]*100
+    var2.3 <- ((R2cum(pc)[3]-R2cum(pc)[2])+(R2cum(pc)[2]-R2cum(pc)[1]))*100
+    var1.3 <- (R2cum(pc)[1]+(R2cum(pc)[3]-R2cum(pc)[2]))*100
+    pc.scores <- as.data.frame(scores(pc))
+
+    par(mfrow=c(2,2))
+    plot(pc.scores[,1], pc.scores[,2], xlab="PC 1", ylab="PC 2", sub=paste(var1.2, "% of the variance explained", sep=""), main="PC 1 vs. PC 2")
+    text(pc.scores[,1], pc.scores[,2], colnames(x), cex=0.6, pos=4, col="red")
+    plot(pc.scores[,2], pc.scores[,3], xlab="PC 2", ylab="PC 3", sub=paste(var2.3, "% of the variance explained", sep=""), main="PC 2 vs. PC 3")
+    text(pc.scores[,2], pc.scores[,3], colnames(x), cex=0.6, pos=4, col="red")
+    plot(pc.scores[,1], pc.scores[,3], xlab="PC 1", ylab="PC 3", sub=paste(var1.3, "% of the variance explained", sep=""), main="PC 1 vs. PC 3")
+    text(pc.scores[,1], pc.scores[,3], colnames(x), cex=0.6, pos=4, col="red")
+    plot(pc, main="Cumulative Variance")
+}
+
 #' @title Annotate .bed file to genes
 #' @description Wrapper for transcriptsByOverlaps(). Returns a GRanges with the gene and transcript ids associated with the input .bed regions. Sometimes it is necessary to expand the search window a bit, because not all .bed regions directly overlap with a transcription start site, so the 'window' parameter is provided to accomplish this.
 #' @param pathToBed The system path to a .bed file (directory + file name)

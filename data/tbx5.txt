@@ -1,4 +1,4 @@
-"chromosome" "gene.start" "gene.end"
+"chromosome" "start" "end"
 "4869" "chr10" 80342560 80362239
 "13610" "chr13" 110535468 110538057
 "34758" "chr4" 126698578 126708040

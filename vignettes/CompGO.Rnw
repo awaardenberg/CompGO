@@ -16,7 +16,7 @@
 \maketitle
 %\VignetteIndexEntry{Introduction}
 \section{Introduction}
-This package contains functions to accomplish several tasks relating to gene ontology enrichment comparison and visualisation given either .bed files or gene lists. It interfaces with rtracklayer and VariantAnnotation to easily annotate .bed files with genes, and with RDAVIDWebService to generate functional annotation charts based on these gene lists. From here, we provide several methods for comparative visualisation, including viewing the GO term hierarchy in two samples using a directed acyclic graph (DAG), performing z-score standardisation (approximately normal using a log odds-ratio (OR) - Equation 1 and 2) of GO terms returned from DAVID and comparing enrichment via pairwise scatterplots with linear fit and Jaccard metrics (Equation 3). We also provide functions to enable large-scale clustering, KEGG pathway enrichment comparison and PCA.\\
+This package contains functions to accomplish several tasks relating to Gene Ontology enrichment comparison and visualisation given either .bed files or gene lists. It interfaces with rtracklayer and VariantAnnotation to easily annotate .bed files with genes, and with RDAVIDWebService to generate functional annotation charts based on these gene lists. From here, we provide several methods for comparative visualisation, including viewing the GO term hierarchy in two samples using a directed acyclic graph (DAG), performing z-score standardisation (approximately normal using a log odds-ratio (OR) - Equation 1 and 2) of GO terms returned from DAVID and comparing enrichment via pairwise scatterplots with linear fit and Jaccard metrics (Equation 3). We also provide functions to enable large-scale clustering, KEGG pathway enrichment comparison and PCA. In this vignette, we will comprehensively demonstrate use of this package on the supplied data.\\
 
 \begin{equation}
 Z \sim N(log(OR), \sigma^{2})
@@ -33,57 +33,159 @@ J_{c} = \frac{A \cap B }{A \cup B}
 
 \section{Annotating .bed files}
 
-The first step in this analysis pipeline is to generate individual Gene Ontology data for each dataset. We provide an interface to generate a list of genes from input .bed coordinates with the function anotateBedFromDb, which can take either a system path or a GRanges object as input:
+The first step in this analysis pipeline is to generate individual Gene Ontology data for each dataset. We provide an interface to generate a list of genes from input .bed coordinates with the function anotateBedFromDb, which can take either a system path or a GRanges object as input. Here we use the example files provided with the package.
 <<>>=
 library(CompGO)
 library(TxDb.Mmusculus.UCSC.mm9.knownGene)
-data(bed.sample)
-# Here we create the GRanges object:
-sample.range = GRanges(seqnames=bed.sample$chr,
-    IRanges(start=bed.sample$start, end=bed.sample$end))
+# load all data packages into R:
+data(gata4)
+data(mef2a)
+data(nkx25)
+data(p300)
+data(srf)
+data(tbx5)
+
+# Create the GRanges objects:
+gata4.range = GRanges(seqnames=gata4$chromosome,
+    IRanges(start = gata4$start, end = gata4$end))
+mef2a.range = GRanges(seqnames=mef2a$chromosome,
+    IRanges(start = mef2a$start, end = mef2a$end))
+nkx25.range = GRanges(seqnames=nkx25$chromosome,
+    IRanges(start = nkx25$start, end = nkx25$end))
+p300.range = GRanges(seqnames=p300$chromosome,
+    IRanges(start = p300$start, end = p300$end))
+srf.range = GRanges(seqnames=srf$chromosome,
+    IRanges(start = srf$start, end = srf$end))
+tbx5.range = GRanges(seqnames=tbx5$chromosome,
+    IRanges(start = tbx5$start, end = tbx5$end))
+
 # Note that the window around the .bed region beyond which
 # genes are cutoff is 5kb, this is modifiable
-sample.annotated = annotateBedFromDb(gRanges = sample.range,
+gata4.annotated = annotateBedFromDb(gRanges = gata4.range,
     db = TxDb.Mmusculus.UCSC.mm9.knownGene)
-head(sample.annotated)
+mef2a.annotated = annotateBedFromDb(gRanges = mef2a.range,
+    db = TxDb.Mmusculus.UCSC.mm9.knownGene)
+nkx25.annotated = annotateBedFromDb(gRanges = nkx25.range,
+    db = TxDb.Mmusculus.UCSC.mm9.knownGene)
+p300.annotated = annotateBedFromDb(gRanges = p300.range,
+    db = TxDb.Mmusculus.UCSC.mm9.knownGene)
+srf.annotated = annotateBedFromDb(gRanges = srf.range,
+    db = TxDb.Mmusculus.UCSC.mm9.knownGene)
+tbx5.annotated = annotateBedFromDb(gRanges = tbx5.range,
+    db = TxDb.Mmusculus.UCSC.mm9.knownGene)
+head(gata4.annotated)
 @
 
 \section{Generation of Gene Ontology data}
-Once we have this annotated GRanges object, we can derive a list of genes to query DAVID and retrieve a full functional annotation chart. Alternatively, a list of genes can be directly supplied to DAVID. Note that there are several parameters available for tweaking the results returned from DAVID. Users can specify PVal and count; however, by default, no thresholding is performed. Since DAVID requires registration before the use of their Web Service R package, you should register first then substitute the placeholder email for your own.
+Once we have these annotated GRanges objects, we can derive lists of genes to query DAVID and retrieve a full functional annotation chart. Alternatively, a list of genes can be directly supplied to DAVID. Note that there are several parameters available for tweaking the results returned from DAVID: users can specify p value and count cutoffs; however, by default, no thresholding is performed. Since DAVID requires registration before the use of their Web Service R package, you should register first then substitute the email here for your own. This step can take some time, since it depends upon the latency of DAVID's server.
 <<>>=
-# fnAnot = getFnAnot_genome(sample.annotated$gene_id,
-#    email = "P.Lace-holder@inst.edu", listName="sample")
-# We instead use examples taken from the RDAVIDWebService package
-# to illustrate the utility of this package:
-data(funChart1)
-data(funChart2)
-str(funChart1)
+gata4.fnAnot = getFnAnot_genome(gata4.annotated$gene_id,
+   email = "S.Bassett@victorchang.edu.au", listName="gata4", getKEGG=TRUE)
+mef2a.fnAnot = getFnAnot_genome(mef2a.annotated$gene_id,
+   email = "S.Bassett@victorchang.edu.au", listName="mef2a", getKEGG=TRUE)
+nkx25.fnAnot = getFnAnot_genome(nkx25.annotated$gene_id,
+   email = "S.Bassett@victorchang.edu.au", listName="nkx25", getKEGG=TRUE)
+p300.fnAnot = getFnAnot_genome(p300.annotated$gene_id,
+   email = "S.Bassett@victorchang.edu.au", listName="p300", getKEGG=TRUE)
+srf.fnAnot = getFnAnot_genome(srf.annotated$gene_id,
+   email = "S.Bassett@victorchang.edu.au", listName="srf", getKEGG=TRUE)
+tbx5.fnAnot = getFnAnot_genome(tbx5.annotated$gene_id,
+   email = "S.Bassett@victorchang.edu.au", listName="tbx5", getKEGG=TRUE)
+
 # once the charts have been retrieved, they can be written
 # to disk for subsequent batch processing like so:
 # write.table(funChart1, "./path/to/text.txt")
+# however, here we continue with the generated charts in R.
 @
 
-\section{Analysis and comparison}
+\section{Clustering and PCA}
 
-If you have multiple functional annotation charts, you can start directly comparing and visualising them in a pairwise manner. If you had output many functional annotation charts to a directory, it's possible to generate a matrix using the zTransformDirectory function. This table can then be used as an input to clustering functions (under development). Below, we will consider two ways of visualising the differences between sets using pairwise scatterplots (Figure 1) and a directed acyclic graph (Figure 2).\\
+When faced with a large volume of data, like we are here, it is useful to first get an overall perspective on how similar or different each set is to each other set. We include a function to do interactive PCA and dendrogram-style clustering on large volumes of data, but that doesn't work well in a non-interactive environment - here, we just use the constituent functions plotPCA and plotDendrogram.
+<<>>=
+# First, put all the charts from the previous step into a list.
+chartList = list("gata4" = gata4.fnAnot, "mef2a" = mef2a.fnAnot, "nkx25" = nkx25.fnAnot,
+    "p300" = p300.fnAnot, "srf" = srf.fnAnot, "tbx5" = tbx5.fnAnot)
+@
 \begin{figure}
 \begin{center}
 <<label=fig1,fig=TRUE>>=
-plotZScores(funChart1, funChart2)
+plotDendrogram(chartList)
 @
 \end{center}
-\caption{Pairwise plot of Z scores for the two datasets. Gene ontology terms are coloured by their Jaccard coefficient as represented in the legend. The level of gene overlap between two sets is shown as the Jaccard coefficient, and the overall similarity between the GO enrichments is represented by the correlation. Using these examples, it can be noted that there is little gene overlap as well as little correlation.}
+\caption{A dendrogram of the sample input data. This gives a good general overview of similarity between individual input sets, later methods show exactly how similar they are (and why).}
 \label{fig:one}
 \end{figure}
 
 \begin{figure}
 \begin{center}
 <<label=fig2,fig=TRUE>>=
-plotTwoGODags(funChart1, funChart2, ont="MF", cutoff=0.01)
+plotPCA(chartList)
 @
 \end{center}
-\caption{Directed acyclic graph showing differences in GO term enrichment: yellow means the term is present in both sets, red means the first input set, green means the second. In addition to pairwise plots, which provide an overview of the comparison, a great way to visualise the differences between two sets is to use a DAG of GO terms. Here, we colour each node based on the set or combinations of sets it originated from - yellow nodes are shared between two, red ones are the first input set, green ones are the second. In this case, there are several clear differences - funChart1 is enriched in oxygen and haeme binding, while funChart2 contains terms for transferase and protein kinase activity.}
+\caption{A PCA of the sample input data}
 \label{fig:two}
 \end{figure}
 
-\end{document}
+\section{Result refinement and visualisation}
+
+Now that a general overview of similarity has been generated using PCA and clustering, it is helpful to understand the differences between specific transcription factor binding sites. The pairwise plots of z-transformed GO terms is very useful as a metric for overall similarity, while the GO term graph shows the specific differences between two sets.
+
+\begin{figure}
+\begin{center}
+<<label=fig3,fig=TRUE>>=
+plotZScores(nkx25.fnAnot, mef2a.fnAnot)
+@
+\end{center}
+\caption{Non-thresholded pairwise plot of Z-scores between Nkx2.5 and Mef2a, two of the more similar sets from the dendrogram. Each point is a GO term, and the colour of each point represents the overlap of genes associated with that term (the Jaccard coefficient). While the Jaccard coefficient remains very low at 0.1, the overall correlation is much higher at 0.58.}
+\label{fig:three}
+\end{figure}
+
+\begin{figure}
+\begin{center}
+<<label=fig4,fig=TRUE>>=
+plotZScores(p300.fnAnot, mef2a.fnAnot)
+@
+\end{center}
+\caption{p300 against Mef2a, two of the more different sets. Interestingly, the Jaccard coefficient between these two sets is marginally higher than before, but the overall correlation is reduced to 0.38.}
+\label{fig:four}
+\end{figure}
+
+\begin{figure}
+\begin{center}
+<<label=fig5,fig=TRUE>>=
+
+@
+\end{center}
+\caption{p300 against Mef2a, two of the more different sets. Interestingly, the Jaccard coefficient between these two sets is marginally higher than before, but the overall correlation is reduced to 0.38.}
+\label{fig:five}
+\end{figure}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%% OLD BELOW THIS LINE %%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\section{Analysis and comparison}
+%
+%If you have multiple functional annotation charts, you can start directly comparing and visualising them in a pairwise manner. If you had output many functional annotation charts to a directory, it's possible to generate a matrix using the zTransformDirectory function. This table can then be used as an input to clustering functions. Below, we will consider two ways of visualising the differences between sets using pairwise scatterplots (Figure 1) and a directed acyclic graph (Figure 2).\\
+%\begin{figure}
+%\begin{center}
+%<<label=fig1,fig=TRUE>>=
+%plotZScores(funChart1, funChart2)
+%@
+%\end{center}
+%\caption{Pairwise plot of Z scores for the two datasets. Gene ontology terms are coloured by their Jaccard coefficient as represented in the legend. The level of gene overlap between two sets is shown as the Jaccard coefficient, and the overall similarity between the GO enrichments is represented by the correlation. Using these examples, it can be noted that there is little gene overlap as well as little correlation.}
+%\label{fig:one}
+%\end{figure}
+
+%\begin{figure}
+%\begin{center}
+%<<label=fig2,fig=TRUE>>=
+%plotTwoGODags(funChart1, funChart2, ont="MF", cutoff=0.01)
+%@
+%\end{center}
+%\caption{Directed acyclic graph showing differences in GO term enrichment: yellow means the term is present in both sets, red means the first input set, green means the second. In addition to pairwise plots, which provide an overview of the comparison, a great way to visualise the differences between two sets is to use a DAG of GO terms. Here, we colour each node based on the set or combinations of sets it originated from - yellow nodes are shared between two, red ones are the first input set, green ones are the second. In this case, there are several clear differences - funChart1 is enriched in oxygen and haeme binding, while funChart2 contains terms for transferase and protein kinase activity.}
+%\label{fig:two}
+%\end{figure}
+
+%\end{document}

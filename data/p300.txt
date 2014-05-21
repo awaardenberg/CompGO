@@ -1,4 +1,4 @@
-"chromosome" "gene.start" "gene.end"
+"chromosome" "start" "end"
 "685" "chr17" 15196307 15211957
 "1189" "chr6" 24478143 24520984
 "700" "chr17" 10649081 10666989

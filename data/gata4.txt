@@ -1,4 +1,4 @@
-"chromosome" "gene.start" "gene.end"
+"chromosome" "start" "end"
 "11554" "chr5" 31505040 31522918
 "4682" "chr14" 20894881 20902348
 "3149" "chr11" 120421617 120434250

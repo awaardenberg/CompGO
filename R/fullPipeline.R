@@ -115,6 +115,8 @@ viewKegg <- function(setA, setB, keggTerm = NULL, species = NULL, workingDir = N
 plotInteractive <- function(input, outDir = NULL, prefix = NULL, pdf = TRUE) {
     if(class(input) != "list")
         stop("input must be of type list")
+    if(!"Term" %in% names(input[[1]]))
+        stop("Please supply valid functional annotation charts as list members")
     stdin = file('stdin')
     on.exit(close(stdin))
 

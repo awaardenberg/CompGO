@@ -221,6 +221,11 @@ plotInteractive <- function(input, outDir = NULL, prefix = NULL, pdf = TRUE) {
     setwd(wd)
 }
 
+#' @title Plot dendrogram given an input list of fnAnot charts
+#' @description Given a list of functional annotation charts, 
+#' this function outputs a dendrogram
+#' @param input A list of functional annotation charts.
+#' @export
 plotDendrogram <- function(input) {
     z.merge = matrix()
     for(i in 1:length(input)) {
@@ -239,6 +244,11 @@ plotDendrogram <- function(input) {
     plot(dist.cor)  
 }
 
+#' @title Plot PCA given an input list of fnAnot charts
+#' @description Given a list of functional annotation charts, 
+#' this function outputs a PCA plot
+#' @param input A list of functional annotation charts.
+#' @export
 plotPCA <-function(input) {
     z.merge = matrix()
     for(i in 1:length(input)) {

@@ -1,0 +1,4 @@
+1.1.0
+    - Added functionality to plot differentially-enriched KEGG pathways using software package pathview
+    - Added interactive plotting function to generate comparisons of many lists at once using PCA and dendrogram plots
+    - Added several example datasets of .bed files from He, A. (2011).

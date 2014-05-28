@@ -3,12 +3,14 @@
 \alias{plotZScores}
 \title{Performs z transform on two sets of GO terms and plots scatterplot of result}
 \usage{
-plotZScores(setA, setB, cutoff = NULL, plotNA = FALSE, model = "lm")
+plotZScores(setA, setB, cutoff = NULL, plotAbs = TRUE, plotNA = FALSE, model = "lm")
 }
 \arguments{
 \item{setA}{DAVIDFunctionalAnnotationChart object to compare}
 
 \item{setB}{DAVIDFunctionalAnnotationChart object to compare}
+
+\item{plotAbs}{Whether to plot the absolute values of z-scores or the raw values}
 
 \item{plotNA}{Whether to remove NAs entirely or set all NAs to 0}
 

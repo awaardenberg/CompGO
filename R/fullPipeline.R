@@ -665,6 +665,7 @@ extractPvalTable <- function(setA, setB, useRawPvals) {
 #' @export
 #' @param setA DAVIDFunctionalAnnotationChart object to compare
 #' @param setB DAVIDFunctionalAnnotationChart object to compare
+#' @param plotAbs Whether to plot the absolute values of z-scores or the raw values
 #' @param plotNA Whether to remove NAs entirely or set all NAs to 0
 #' @param model The model to use when plotting linear fit, default 'lm'
 #' @param cutoff If you want to apply a Benjamini corrected P-value cutoff to each list before generating Z scores, supply it here
@@ -672,7 +673,7 @@ extractPvalTable <- function(setA, setB, useRawPvals) {
 #' data(funChart1)
 #' data(funChart2)
 #' plotZScores(funChart1, funChart2)
-plotZScores <- function(setA, setB, cutoff = NULL, plotNA = FALSE, model='lm') {
+plotZScores <- function(setA, setB, cutoff = NULL, plotAbs = TRUE, plotNA = FALSE, model='lm') {
     if (all(c("Category", "X.", "PValue", "Benjamini") %in% names(setA))) {
         #zAll = doZtrans.single(setA, "SetA")
         #names(zAll)[ncol(zAll)] = "SetA"
@@ -711,6 +712,11 @@ plotZScores <- function(setA, setB, cutoff = NULL, plotNA = FALSE, model='lm') {
         zAll[is.na(zAll)] <- 0
     } else {
         zAll = zAll[complete.cases(zAll),]
+    }
+
+    if(plotAbs == TRUE) {
+        zAll$setA = abs(zAll$setA)
+        zAll$setB = abs(zAll$setB)
     }
 
     geneA = setA$Genes
@@ -1058,6 +1064,7 @@ plotZRankedDAG <- function (setA, setB, ont = "BP", n = 100, maxLabel = NULL,
     # Ugly Pvalue -> 0:255 -> hex conversion
     gb = ifelse(n %in% setU$Term, sub(" ", "0", sprintf("%2x", 
         floor(setU$PValue*255))), "ff")
+    # probably could do with better scaling: like y=255*0.05^5x
     gb = sprintf("%s%s", gb, gb)
     nodeColours = paste("#ff", gb, sep='')
     nodeShapes  = "rectangle"

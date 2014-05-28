@@ -169,33 +169,3 @@ plotZRankedDAG(p300.fnAnot, mef2a.fnAnot, ont="MF", n=50)
 \caption{Significant differences between p300 and Mef2a in molecular function.}
 \label{fig:six}
 \end{figure}
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%% OLD BELOW THIS LINE %%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%\section{Analysis and comparison}
-%
-%If you have multiple functional annotation charts, you can start directly comparing and visualising them in a pairwise manner. If you had output many functional annotation charts to a directory, it's possible to generate a matrix using the zTransformDirectory function. This table can then be used as an input to clustering functions. Below, we will consider two ways of visualising the differences between sets using pairwise scatterplots (Figure 1) and a directed acyclic graph (Figure 2).\\
-%\begin{figure}
-%\begin{center}
-%<<label=fig1,fig=TRUE>>=
-%plotZScores(funChart1, funChart2)
-%@
-%\end{center}
-%\caption{Pairwise plot of Z scores for the two datasets. Gene ontology terms are coloured by their Jaccard coefficient as represented in the legend. The level of gene overlap between two sets is shown as the Jaccard coefficient, and the overall similarity between the GO enrichments is represented by the correlation. Using these examples, it can be noted that there is little gene overlap as well as little correlation.}
-%\label{fig:one}
-%\end{figure}
-
-%\begin{figure}
-%\begin{center}
-%<<label=fig2,fig=TRUE>>=
-%plotTwoGODags(funChart1, funChart2, ont="MF", cutoff=0.01)
-%@
-%\end{center}
-%\caption{Directed acyclic graph showing differences in GO term enrichment: yellow means the term is present in both sets, red means the first input set, green means the second. In addition to pairwise plots, which provide an overview of the comparison, a great way to visualise the differences between two sets is to use a DAG of GO terms. Here, we colour each node based on the set or combinations of sets it originated from - yellow nodes are shared between two, red ones are the first input set, green ones are the second. In this case, there are several clear differences - funChart1 is enriched in oxygen and haeme binding, while funChart2 contains terms for transferase and protein kinase activity.}
-%\label{fig:two}
-%\end{figure}
-
-%\end{document}

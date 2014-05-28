@@ -2,3 +2,6 @@
     - Added functionality to plot differentially-enriched KEGG pathways using software package pathview
     - Added interactive plotting function to generate comparisons of many lists at once using PCA and dendrogram plots
     - Added several example datasets of .bed files from He, A. (2011).
+1.1.1
+    - Included static vignette for illustration purposes. Some steps in our pipeline require either writing to disk or the use of a registered email, which are difficult to include in a dynamically-compiled vignette. Using a vignette that is able to show each of the steps in the pipeline with a helpful degree of detail is better than having a dynamic but less expressive one.
+    - The vignette included uses the example datasets from He (2011) to run through the entire pipeline, illustrating the major steps and providing a useful template for analysis.

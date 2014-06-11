@@ -1063,7 +1063,7 @@ plotZRankedDAG <- function (setA, setB, ont = "BP", n = 100, maxLabel = NULL,
     #     round(setU$PValue,3), 1), "1.000", sep=", ")
     # Ugly Pvalue -> 0:255 -> hex conversion
     gb = ifelse(n %in% setU$Term, sub(" ", "0", sprintf("%2x", 
-        floor(setU$PValue*255))), "ff")
+        floor(255*0.05^(setU$PValue)))), "ff")
     # probably could do with better scaling: like y=255*0.05^5x
     gb = sprintf("%s%s", gb, gb)
     nodeColours = paste("#ff", gb, sep='')

@@ -7,3 +7,4 @@
     - The vignette included uses the example datasets from He (2011) to run through the entire pipeline, illustrating the major steps and providing a useful template for analysis.
 1.1.3
     - Added ability to plot absolute values of Z-scores in plotZScores()
+    - Fixed vignette to include Abs() plotting

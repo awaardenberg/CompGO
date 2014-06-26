@@ -99,7 +99,6 @@ viewKegg <- function(setA, setB, keggTerm = NULL, species = NULL, workingDir = N
     if(!is.null(workingDir)) {
         setwd(currDir)
     }
-    messages(head(z.comp))
     return(pv.out)
 }
 

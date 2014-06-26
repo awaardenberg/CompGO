@@ -12,7 +12,7 @@ export(plotZRankedDAG)
 export(compareZscores)
 export(viewKegg)
 export(plotInteractive)
-export(plotPCA)
+export(PCAplot)
 export(plotDendrogram)
 
 import(rtracklayer, Rgraphviz, ggplot2, GenomicFeatures, TxDb.Mmusculus.UCSC.mm9.knownGene)

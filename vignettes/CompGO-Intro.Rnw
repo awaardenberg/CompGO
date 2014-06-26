@@ -32,8 +32,9 @@ J_{c} = \frac{A \cap B }{A \cup B}
 Please see full vignette for usage instructions, or the user manual for function definitions.
 
 <<>>=
-library(CompGO)
-help.start()
+# Not run because it spawns processes at compile time
+#library(CompGO)
+#help.start()
 # Then navigate to CompGO, click on "Package vignettes and other information", and open CompGO-vignette.pdf
 @
 

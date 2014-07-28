@@ -11,7 +11,7 @@ annotateBedFromDb(pathToBed = NULL, gRanges = NULL, db = NULL,
 
 \item{gRanges}{If the user has a .bed file already loaded in R, they can supply it here as a GRanges object rather than re-importing it}
 
-\item{db}{A TranscriptDb object containing the transcripts of the organism (required)}
+\item{db}{A TxDb object containing the transcripts of the organism (required)}
 
 \item{window}{The window around a .bed region to search for genes, default 5kb}
 }

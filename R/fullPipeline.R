@@ -282,7 +282,7 @@ PCAplot <-function(input) {
 #' @description Wrapper for transcriptsByOverlaps(). Returns a GRanges with the gene and transcript ids associated with the input .bed regions. Sometimes it is necessary to expand the search window a bit, because not all .bed regions directly overlap with a transcription start site, so the 'window' parameter is provided to accomplish this.
 #' @param pathToBed The system path to a .bed file (directory + file name)
 #' @param gRanges If the user has a .bed file already loaded in R, they can supply it here as a GRanges object rather than re-importing it
-#' @param db A TranscriptDb object containing the transcripts of the organism (required)
+#' @param db A TxDb object containing the transcripts of the organism (required)
 #' @param window The window around a .bed region to search for genes, default 5kb
 #' @export
 #' @return A GRanges object with corresponding EntrezGene IDs in gene_id column, plus transcript IDs in tx_id
@@ -302,7 +302,7 @@ annotateBedFromDb <- function(pathToBed = NULL, gRanges = NULL, db = NULL, windo
     }
 
     if (is.null(db)) {
-        stop("A TranscriptDb object must be supplied for annotation. Please see documentation for an example")
+        stop("A TxDb object must be supplied for annotation. Please see documentation for an example")
     }
 
     if (is.null(gRanges)) {

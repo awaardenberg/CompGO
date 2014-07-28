@@ -8,7 +8,7 @@ Description: This package contains functions to accomplish several tasks. It is
     annotation and gene ontology enrichment charts based on gene lists (such as
     those generated from input .bed files) and finally visualise and compare
     these enrichments using either directed acyclic graphs or scatterplots.
-Version: 1.1.4
+Version: 1.1.5
 Authors@R: c(person("Sam D.", "Bassett", role = 'aut',
     email='S.Bassett@victorchang.edu.au'),
     person("Ashley J.", "Waardenberg", role=c('aut', 'cre'),

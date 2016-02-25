@@ -7,12 +7,14 @@ Description: This package contains functions to accomplish several tasks. It is
     aforementioned database dumps, interface with DAVID to create functional
     annotation and gene ontology enrichment charts based on gene lists (such as
     those generated from input .bed files) and finally visualise and compare
-    these enrichments using either directed acyclic graphs or scatterplots.
+    these enrichments using either directed acyclic graphs or scatterplots. 
+    CompGO implements a log-odds ratio (z-score) statistic for determining
+    statistical significance of GO term enrichment between experiments.
 Version: 1.5.0
 Authors@R: c(person("Sam D.", "Bassett", role = 'aut',
-    email='S.Bassett@victorchang.edu.au'),
+    email='sa.d.bassett@gmail.com'),
     person("Ashley J.", "Waardenberg", role=c('aut', 'cre'),
-    email='A.Waardenberg@victorchang.edu.au'))
+    email='awaardenberg@cmri.org.au'))
 License: GPL-2
 Depends:
     RDAVIDWebService

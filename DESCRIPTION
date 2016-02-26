@@ -12,7 +12,7 @@ Description: This package contains functions to accomplish several tasks. It is
     statistical significance of GO term enrichment between experiments.
 Version: 1.5.0
 Authors@R: c(person("Sam D.", "Bassett", role = 'aut',
-    email='sa.d.bassett@gmail.com'),
+    email='sam.d.bassett@gmail.com'),
     person("Ashley J.", "Waardenberg", role=c('aut', 'cre'),
     email='awaardenberg@cmri.org.au'))
 License: GPL-2
